@@ -11,6 +11,16 @@ constexpr int canvas_height = 800;
 constexpr int viewport_width = 1;
 constexpr int viewport_height = 1;
 
+class Transform
+{
+public:
+    float scale; // On All Axis
+    float rotation; // Around Y-Axis
+    glm::vec3 scale_axis;
+    glm::vec3 rotation_axis;
+    glm::vec3 translation;
+};
+
 class Point
 {
 public:
@@ -46,20 +56,6 @@ public:
     std::vector<int> point_indices;
     sf::Color color;
 
-};
-
-class Model
-{
-    // Assume Mode is only made of one cube
-public:
-    std::vector<Cube> cubes;
-};
-
-class Instance
-{
-public:
-    Model model;
-    glm::vec3 translation_vector;
 };
 
 class Cube
@@ -109,6 +105,22 @@ public:
     
 };
 
+
+class Model
+{
+public:
+    std::vector<Cube> cubes;
+};
+
+class Instance
+{
+public:
+    Model model;
+    glm::vec3 translation_vector;
+    Transform transform;
+};
+
+
 void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color);
 glm::vec3 CanvasToViewPort(int x, int y);
 void DrawLine(Point p0, Point p1, sf::Color color);
@@ -124,6 +136,11 @@ void RenderTriangle(Triangle triangle, std::vector<Point>& projected);
 void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles);
 void RenderScene(std::vector<Instance> instances);
 void RenderInstance(Instance instance);
+Point ApplyTransform(Point v, Transform transform);
+Point Scale(Point v, glm::vec3 scale_axis);
+Point Rotate(Point v, glm::vec3 rotation_axis);
+Point Translate(Point v, glm::vec3 translation_vector);
+
 
 sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
 sf::RectangleShape pixel(sf::Vector2f(1, 1));
@@ -139,11 +156,15 @@ int main()
 
     Instance instance_1;
     instance_1.model = model;
-    instance_1.translation_vector = glm::vec3(-1.5f, 0.0f, 7.0f);
+    instance_1.transform.translation = glm::vec3(-1.5f, 0.0f, 7.0f);
+    instance_1.transform.rotation_axis = glm::vec3(32.0f, 67.0f, 0.0f);
+    instance_1.transform.scale_axis = glm::vec3(1.0f, 2.0f, 1.0f);
     
     Instance instance_2;
     instance_2.model = model;
-    instance_2.translation_vector = glm::vec3(1.25f, 2.0f, 7.5f);
+    instance_2.transform.translation = glm::vec3(1.25f, 2.0f, 7.5f);
+    instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
+    instance_2.transform.scale_axis = glm::vec3(3.0f, 1.0f, 1.0f);
 
     std::vector<Instance> instances;
     instances.push_back(instance_1);
@@ -518,11 +539,12 @@ void RenderInstance(Instance instance)
 {
     std::vector<Point> projected;
     Model model = instance.model;
-    for(auto& cube : model.cubes)
+    for(auto cube : model.cubes)
     {
         for(auto& v : cube.vertices)
         {
-            projected.push_back(ProjectVertex(v));
+            Point v_transformed = ApplyTransform(v, instance.transform);
+            projected.push_back(ProjectVertex(v_transformed));
         }
 
         for(auto& t : cube.triangles)
@@ -532,6 +554,46 @@ void RenderInstance(Instance instance)
 
         projected.clear();
     }
-
-   
 }
+
+Point ApplyTransform(Point v, Transform transform)
+{
+    Point v_scaled = Scale(v, transform.scale_axis);
+    Point v_rotated = Rotate(v_scaled, transform.rotation_axis);
+    Point v_translated = Translate(v_rotated, transform.translation);   
+
+    return v_translated;
+}
+
+Point Scale(Point v, glm::vec3 scale_axis)
+{
+    glm::vec4 v_vertex(v.x, v.y, v.z, 1.0f);
+    glm::vec4 v_scaled = glm::scale(glm::mat4(1.0f), scale_axis) * v_vertex;
+
+    Point p_scaled(v_scaled.x, v_scaled.y, v_scaled.z);
+
+    return p_scaled;
+}
+
+Point Rotate(Point v, glm::vec3 rotation_axis)
+{
+    glm::vec4 v_vertex(v.x, v.y, v.z, 1.0f);
+    glm::vec4 v_rotated_x = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_axis.x), glm::vec3(1.0f, 0.0f, 0.0f)) * v_vertex;
+    glm::vec4 v_rotated_y = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_axis.y), glm::vec3(0.0f, 1.0f, 0.0f)) * v_rotated_x;
+    glm::vec4 v_rotated_z = glm::rotate(glm::mat4(1.0f), glm::radians(rotation_axis.z), glm::vec3(0.0f, 0.0f, 1.0f)) * v_rotated_y;
+
+    Point p_rotated(v_rotated_z.x, v_rotated_z.y, v_rotated_z.z);
+
+    return p_rotated;
+}
+
+Point Translate(Point v, glm::vec3 translation_vector)
+{
+    glm::vec4 v_vertex(v.x, v.y, v.z, 1.0f);
+    glm::vec3 v_translated = glm::translate(glm::mat4(1.0f), translation_vector) * v_vertex;
+
+    Point p_translated(v_translated.x, v_translated.y, v_translated.z);
+
+    return p_translated;
+}
+
