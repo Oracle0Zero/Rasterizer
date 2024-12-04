@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "Camera.h"
 
 constexpr int canvas_width = 800;
 constexpr int canvas_height = 800;
@@ -11,15 +12,8 @@ constexpr int canvas_height = 800;
 constexpr int viewport_width = 1;
 constexpr int viewport_height = 1;
 
-class Transform
-{
-public:
-    float scale; // On All Axis
-    float rotation; // Around Y-Axis
-    glm::vec3 scale_axis;
-    glm::vec3 rotation_axis;
-    glm::vec3 translation;
-};
+
+float d = 1.0f;
 
 class Point
 {
@@ -39,6 +33,7 @@ public:
 
   friend Point operator+(const Point& p1, const glm::vec3& p2);
 
+
 };
 
 Point operator+(const Point& p1, const glm::vec3& p2)
@@ -49,6 +44,7 @@ Point operator+(const Point& p1, const glm::vec3& p2)
     new_point.z = p1.z + p2.z;
     return new_point;
 }
+
 
 class Triangle
 {
@@ -120,6 +116,12 @@ public:
     Transform transform;
 };
 
+class Scene
+{
+public:
+    std::vector<Instance> instances;
+};
+
 
 void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color);
 glm::vec3 CanvasToViewPort(int x, int y);
@@ -140,15 +142,18 @@ Point ApplyTransform(Point v, Transform transform);
 Point Scale(Point v, glm::vec3 scale_axis);
 Point Rotate(Point v, glm::vec3 rotation_axis);
 Point Translate(Point v, glm::vec3 translation_vector);
+Point ApplyCameraTransform(Point v, Transform transform);
 
 
 sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
 sf::RectangleShape pixel(sf::Vector2f(1, 1));
 
-float d = 1.0f;
+
+Camera c;
 
 int main()
 {
+    c.SetCameraPosition(glm::vec3(0.0f, 0.0f, -d));
     Cube c1;
 
     Model model;
@@ -166,9 +171,9 @@ int main()
     instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
     instance_2.transform.scale_axis = glm::vec3(3.0f, 1.0f, 1.0f);
 
-    std::vector<Instance> instances;
-    instances.push_back(instance_1);
-    instances.push_back(instance_2);
+    Scene s;
+    s.instances.push_back(instance_1);
+    s.instances.push_back(instance_2);
 
     while (window.isOpen())
     {
@@ -179,50 +184,30 @@ int main()
                 window.close();
         }
 
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+        {
+            c.camera_transform.translation.z += 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+        {
+            c.camera_transform.translation.z -= 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+        {
+            c.camera_transform.translation.x -= 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            c.camera_transform.translation.x += 0.05f;
+        }
+
         window.clear(sf::Color::White);
 
 
-        /*
-        // The four "front" vertices
-        Point vAf = Point{-2, -0.5, 5};
-        Point vBf = Point{-2,  0.5, 5};
-        Point vCf = Point{-1,  0.5, 5};
-        Point vDf = Point{-1, -0.5, 5};
-
-        // The four "back" vertices
-        Point vAb = Point{-2, -0.5, 6};
-        Point vBb = Point{-2,  0.5, 6};
-        Point vCb = Point{-1,  0.5, 6};
-        Point vDb = Point{-1, -0.5, 6};
-
-        // The front face
-        DrawLine(ProjectVertex(vAf), ProjectVertex(vBf), sf::Color::Blue);
-        DrawLine(ProjectVertex(vBf), ProjectVertex(vCf), sf::Color::Blue);
-        DrawLine(ProjectVertex(vCf), ProjectVertex(vDf), sf::Color::Blue);
-        DrawLine(ProjectVertex(vDf), ProjectVertex(vAf), sf::Color::Blue);
-
-        // The back face
-        DrawLine(ProjectVertex(vAb), ProjectVertex(vBb), sf::Color::Red);
-        DrawLine(ProjectVertex(vBb), ProjectVertex(vCb), sf::Color::Red);
-        DrawLine(ProjectVertex(vCb), ProjectVertex(vDb), sf::Color::Red);
-        DrawLine(ProjectVertex(vDb), ProjectVertex(vAb), sf::Color::Red);
-
-        // The front-to-back edges
-        DrawLine(ProjectVertex(vAf), ProjectVertex(vAb), sf::Color::Green);
-        DrawLine(ProjectVertex(vBf), ProjectVertex(vBb), sf::Color::Green);
-        DrawLine(ProjectVertex(vCf), ProjectVertex(vCb), sf::Color::Green);
-        DrawLine(ProjectVertex(vDf), ProjectVertex(vDb), sf::Color::Green);
-
-        */
-
-        //DrawFilledTriangle(Point{-200, -250, 0.5f}, Point{2   00, 50, 0.5f}, Point{20, 250}, sf::Color::Green);
-        //DrawLine(glm::vec2(-200, -250), glm::vec2(200, 50), sf::Color::Black);
-        //DrawWireframeTriangle(Point{-200, -250}, Point{200, 50}, Point{20, 250}, sf::Color::Black);
-
-        //DrawCube();
-        //RenderObject(c.vertices, c.triangles);
-
-        RenderScene(instances);
+        RenderScene(s.instances);
 
         window.display();
     }
@@ -543,8 +528,10 @@ void RenderInstance(Instance instance)
     {
         for(auto& v : cube.vertices)
         {
-            Point v_transformed = ApplyTransform(v, instance.transform);
-            projected.push_back(ProjectVertex(v_transformed));
+            Point v_model = ApplyTransform(v, instance.transform);
+            Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
+
+            projected.push_back(ProjectVertex(v_view));
         }
 
         for(auto& t : cube.triangles)
@@ -561,6 +548,15 @@ Point ApplyTransform(Point v, Transform transform)
     Point v_scaled = Scale(v, transform.scale_axis);
     Point v_rotated = Rotate(v_scaled, transform.rotation_axis);
     Point v_translated = Translate(v_rotated, transform.translation);   
+
+    return v_translated;
+}
+
+Point ApplyCameraTransform(Point v, Transform transform)
+{
+    Point v_scaled = Scale(v, transform.scale_axis);
+    Point v_rotated = Rotate(v_scaled, -1.0f*transform.rotation_axis);
+    Point v_translated = Translate(v_rotated, -1.0f*transform.translation);   
 
     return v_translated;
 }
