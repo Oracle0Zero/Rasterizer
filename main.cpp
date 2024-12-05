@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include "Camera.h"
+#include "Triangle.h"
 
 constexpr int canvas_width = 800;
 constexpr int canvas_height = 800;
@@ -31,9 +32,16 @@ public:
         h = h_intensity;
     }
 
-  friend Point operator+(const Point& p1, const glm::vec3& p2);
+    float Magnitude()
+    {
+        glm::vec3 v(x, y, z);
 
+        return glm::length(v);
+    }
 
+    friend Point operator+(const Point& p1, const glm::vec3& p2);
+    friend Point operator+(const Point& p1, const Point& p2);
+    friend Point operator-(const Point& p1, const Point& p2);
 };
 
 Point operator+(const Point& p1, const glm::vec3& p2)
@@ -45,14 +53,28 @@ Point operator+(const Point& p1, const glm::vec3& p2)
     return new_point;
 }
 
-
-class Triangle
+Point operator+(const Point& p1, const Point& p2)
 {
-public:
-    std::vector<int> point_indices;
-    sf::Color color;
+    Point new_point{p1.x, p1.y, p1.z, p1.h};
+    new_point.x = p1.x + p2.x;
+    new_point.y = p1.y + p2.y;
+    new_point.z = p1.z + p2.z;
+    new_point.h = p1.h + p2.h;
+    return new_point;
+}
 
-};
+Point operator-(const Point& p1, const Point& p2)
+{
+    Point new_point{p1.x, p1.y, p1.z, p1.h};
+    new_point.x = p2.x - p1.x;
+    new_point.y = p2.y - p1.y;
+    new_point.z = p2.z - p1.z;
+    new_point.h = p2.h - p1.h;
+    return new_point;
+}
+
+
+
 
 class Cube
 {
@@ -60,6 +82,8 @@ class Cube
 public:
     std::vector<Point> vertices;
     std::vector<Triangle> triangles;
+    float bounding_shere_radius;
+    Point bounding_sphere_center{0.0f, 0.0f, 0.0f};
 
     Cube()
     {
@@ -161,15 +185,16 @@ int main()
 
     Instance instance_1;
     instance_1.model = model;
-    instance_1.transform.translation = glm::vec3(-1.5f, 0.0f, 7.0f);
-    instance_1.transform.rotation_axis = glm::vec3(32.0f, 67.0f, 0.0f);
-    instance_1.transform.scale_axis = glm::vec3(1.0f, 2.0f, 1.0f);
+    instance_1.transform.translation = glm::vec3(1.0f, 2.0f, 7.0f);
+    instance_1.transform.rotation_axis = glm::vec3(23.0f, 29.0f, 0.0f);
+    instance_1.transform.scale_axis = glm::vec3(2.0f, 1.5f, 1.0f);
     
     Instance instance_2;
     instance_2.model = model;
-    instance_2.transform.translation = glm::vec3(1.25f, 2.0f, 7.5f);
+    instance_2.transform.translation = glm::vec3(-1.25f, -2.0f, 7.5f);
     instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
     instance_2.transform.scale_axis = glm::vec3(3.0f, 1.0f, 1.0f);
+    
 
     Scene s;
     s.instances.push_back(instance_1);
@@ -522,32 +547,57 @@ void RenderScene(std::vector<Instance> instances)
 
 void RenderInstance(Instance instance)
 {
+    std::vector<Point> model_transformed;
+    //std::vector<Point> view_transformed;
     std::vector<Point> projected;
     Model model = instance.model;
-    for(auto cube : model.cubes)
+    for(auto& cube : model.cubes)
     {
         for(auto& v : cube.vertices)
         {
-            Point v_model = ApplyTransform(v, instance.transform);
-            Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
 
+            Point v_model = ApplyTransform(v, instance.transform);
+            model_transformed.push_back(v_model);
+
+            Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
             projected.push_back(ProjectVertex(v_view));
         }
+
+        Point center{0.0f, 0.0f, 0.0f};
+        float far_point_distance = 0.0f;
+        for(auto& p : model_transformed)
+        {
+            
+            center = center + p;
+            
+        }
+
+        cube.bounding_sphere_center.x = center.x / cube.vertices.size();
+        cube.bounding_sphere_center.y = center.y / cube.vertices.size();
+        cube.bounding_sphere_center.z = center.z / cube.vertices.size();
+        cube.bounding_sphere_center.h = center.h / cube.vertices.size();
+
+        cube.bounding_shere_radius = (model_transformed[0] - cube.bounding_sphere_center).Magnitude();
+        
+        printf("%f\n", cube.bounding_shere_radius);
 
         for(auto& t : cube.triangles)
         {
             RenderTriangle(t, projected);
         }
 
+        model_transformed.clear();
         projected.clear();
     }
 }
 
 Point ApplyTransform(Point v, Transform transform)
 {
+    
+
     Point v_scaled = Scale(v, transform.scale_axis);
     Point v_rotated = Rotate(v_scaled, transform.rotation_axis);
-    Point v_translated = Translate(v_rotated, transform.translation);   
+    Point v_translated = Translate(v_rotated, transform.translation);
 
     return v_translated;
 }
@@ -557,6 +607,7 @@ Point ApplyCameraTransform(Point v, Transform transform)
     Point v_scaled = Scale(v, transform.scale_axis);
     Point v_rotated = Rotate(v_scaled, -1.0f*transform.rotation_axis);
     Point v_translated = Translate(v_rotated, -1.0f*transform.translation);   
+
 
     return v_translated;
 }
