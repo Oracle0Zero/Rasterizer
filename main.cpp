@@ -6,6 +6,11 @@
 #include <string>
 #include "Camera.h"
 #include "Triangle.h"
+#include "Plane.h"
+#include "Model.h"
+#include "Point.h"
+#include "Instance.h"
+#include "Scene.h"
 
 constexpr int canvas_width = 800;
 constexpr int canvas_height = 800;
@@ -13,139 +18,7 @@ constexpr int canvas_height = 800;
 constexpr int viewport_width = 1;
 constexpr int viewport_height = 1;
 
-
 float d = 1.0f;
-
-class Point
-{
-public:
-    float x;
-    float y;
-    float z;
-    float h;
-
-    Point(float x_coord, float y_coord, float z_coord, float h_intensity=1.0f)
-    {
-        x = x_coord;
-        y = y_coord;
-        z = z_coord;
-        h = h_intensity;
-    }
-
-    float Magnitude()
-    {
-        glm::vec3 v(x, y, z);
-
-        return glm::length(v);
-    }
-
-    friend Point operator+(const Point& p1, const glm::vec3& p2);
-    friend Point operator+(const Point& p1, const Point& p2);
-    friend Point operator-(const Point& p1, const Point& p2);
-};
-
-Point operator+(const Point& p1, const glm::vec3& p2)
-{
-    Point new_point{p1.x, p1.y, p1.z, p1.h};
-    new_point.x = p1.x + p2.x;
-    new_point.y = p1.y + p2.y;
-    new_point.z = p1.z + p2.z;
-    return new_point;
-}
-
-Point operator+(const Point& p1, const Point& p2)
-{
-    Point new_point{p1.x, p1.y, p1.z, p1.h};
-    new_point.x = p1.x + p2.x;
-    new_point.y = p1.y + p2.y;
-    new_point.z = p1.z + p2.z;
-    new_point.h = p1.h + p2.h;
-    return new_point;
-}
-
-Point operator-(const Point& p1, const Point& p2)
-{
-    Point new_point{p1.x, p1.y, p1.z, p1.h};
-    new_point.x = p2.x - p1.x;
-    new_point.y = p2.y - p1.y;
-    new_point.z = p2.z - p1.z;
-    new_point.h = p2.h - p1.h;
-    return new_point;
-}
-
-
-
-
-class Cube
-{
-    // Cube Centered as (0, 0, 0)
-public:
-    std::vector<Point> vertices;
-    std::vector<Triangle> triangles;
-    float bounding_shere_radius;
-    Point bounding_sphere_center{0.0f, 0.0f, 0.0f};
-
-    Cube()
-    {
-        vertices.push_back(Point{1, 1, 1});
-        vertices.push_back(Point{-1, 1, 1});
-        vertices.push_back(Point{-1, -1, 1});
-        vertices.push_back(Point{1, -1, 1});
-        vertices.push_back(Point{1, 1, -1});
-        vertices.push_back(Point{-1, 1, -1});
-        vertices.push_back(Point{-1, -1, -1});
-        vertices.push_back(Point{1, -1, -1});
-
-
-        std::vector<int> indices = {0, 1, 1};
-        triangles.push_back(Triangle{indices, sf::Color::Red});
-        indices = {0, 2, 3};
-        triangles.push_back(Triangle{indices, sf::Color::Red});
-        indices = {4, 0, 3};
-        triangles.push_back(Triangle{indices, sf::Color::Green});
-        indices = {4, 3, 7};
-        triangles.push_back(Triangle{indices, sf::Color::Green}); 
-        indices = {5, 4, 7};
-        triangles.push_back(Triangle{indices, sf::Color::Blue}); 
-        indices = {5, 7, 6};
-        triangles.push_back(Triangle{indices, sf::Color::Blue}); 
-        indices = {1, 5, 6};
-        triangles.push_back(Triangle{indices, sf::Color::Yellow}); 
-        indices = {1, 6, 2};
-        triangles.push_back(Triangle{indices, sf::Color::Yellow}); 
-        indices = {4, 5, 1};
-        triangles.push_back(Triangle{indices, sf::Color::Magenta}); 
-        indices = {4, 1, 0};
-        triangles.push_back(Triangle{indices, sf::Color::Magenta}); 
-        indices = {2, 6, 7};
-        triangles.push_back(Triangle{indices, sf::Color::Cyan}); 
-        indices = {2, 7, 3};
-        triangles.push_back(Triangle{indices, sf::Color::Cyan}); 
-    }
-    
-};
-
-
-class Model
-{
-public:
-    std::vector<Cube> cubes;
-};
-
-class Instance
-{
-public:
-    Model model;
-    glm::vec3 translation_vector;
-    Transform transform;
-};
-
-class Scene
-{
-public:
-    std::vector<Instance> instances;
-};
-
 
 void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color);
 glm::vec3 CanvasToViewPort(int x, int y);
@@ -167,7 +40,8 @@ Point Scale(Point v, glm::vec3 scale_axis);
 Point Rotate(Point v, glm::vec3 rotation_axis);
 Point Translate(Point v, glm::vec3 translation_vector);
 Point ApplyCameraTransform(Point v, Transform transform);
-
+float SignedDistance(Plane plane, Point vertex);
+float SignedDistance(Plane plane, Point vertex);
 
 sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
 sf::RectangleShape pixel(sf::Vector2f(1, 1));
@@ -200,6 +74,13 @@ int main()
     s.instances.push_back(instance_1);
     s.instances.push_back(instance_2);
 
+    std::vector<Plane> planes;
+    planes.push_back(Plane{glm::vec3(0, 0, 1), -d});
+    planes.push_back(Plane{glm::vec3(1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0});
+    planes.push_back(Plane{glm::vec3(-1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0});
+    planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
+    planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -227,6 +108,11 @@ int main()
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
         {
             c.camera_transform.translation.x += 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        {
+            c.camera_transform.rotation_axis.y += 0.5f;
         }
 
         window.clear(sf::Color::White);
@@ -577,9 +463,9 @@ void RenderInstance(Instance instance)
         cube.bounding_sphere_center.z = center.z / cube.vertices.size();
         cube.bounding_sphere_center.h = center.h / cube.vertices.size();
 
-        cube.bounding_shere_radius = (model_transformed[0] - cube.bounding_sphere_center).Magnitude();
+        cube.bounding_shpere_radius = (model_transformed[0] - cube.bounding_sphere_center).Magnitude();
         
-        printf("%f\n", cube.bounding_shere_radius);
+        //printf("%f\n", cube.bounding_shere_radius);
 
         for(auto& t : cube.triangles)
         {
@@ -589,6 +475,20 @@ void RenderInstance(Instance instance)
         model_transformed.clear();
         projected.clear();
     }
+
+
+    Point center{0.0f, 0.0f, 0.0f};
+    // Calculate Instance Center and Radis
+    for(auto& cube : model.cubes)
+    {
+        center = center + cube.bounding_sphere_center;
+    }
+
+    instance.bounding_sphere_center.x = center.x / instance.model.cubes.size();
+    instance.bounding_sphere_center.y = center.y / instance.model.cubes.size();
+    instance.bounding_sphere_center.z = center.z / instance.model.cubes.size();
+
+    //instance.bounding_shpere_radius = (model.cubes[0].bounding_sphere_center - instance.bounding_sphere_center).Magnitude();
 }
 
 Point ApplyTransform(Point v, Transform transform)
@@ -643,4 +543,19 @@ Point Translate(Point v, glm::vec3 translation_vector)
 
     return p_translated;
 }
+
+
+float SignedDistance(Plane plane, Point vertex)
+{
+    glm::vec3 normal = plane.GetNormal();
+
+    return (vertex.x*normal.x) + (vertex.y*normal.y) + (vertex.z*normal.z) + plane.GetDistanceFromOrigin();
+}
+
+Instance ClipInstanceAgainstPlane(Instance instance, Plane plane)
+{
+    Point instance_bounding_sphere_center(instance.bounding_sphere_center.x, instance.bounding_sphere_center.y, instance.bounding_sphere_center.z);
+    float d = SignedDistance(plane, instance_bounding_sphere_center);
+}
+
 
