@@ -42,6 +42,11 @@ Point Translate(Point v, glm::vec3 translation_vector);
 Point ApplyCameraTransform(Point v, Transform transform);
 float SignedDistance(Plane plane, Point vertex);
 float SignedDistance(Plane plane, Point vertex);
+Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane);
+std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane);
+Triangle ClipTriangle(Triangle triangle, Plane plane);
+Scene ClipScene(Scene scene, std::vector<Plane> planes);
+Instance ClipInstance(Instance instance, std::vector<Plane> planes);
 
 sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
 sf::RectangleShape pixel(sf::Vector2f(1, 1));
@@ -58,16 +63,16 @@ int main()
     model.cubes.push_back(c1);
 
     Instance instance_1;
-    instance_1.model = model;
-    instance_1.transform.translation = glm::vec3(1.0f, 2.0f, 7.0f);
+    instance_1.cube = c1;
+    instance_1.transform.translation = glm::vec3(1.0f, 1.0f, 7.0f);
     instance_1.transform.rotation_axis = glm::vec3(23.0f, 29.0f, 0.0f);
-    instance_1.transform.scale_axis = glm::vec3(2.0f, 1.5f, 1.0f);
+    instance_1.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
     
     Instance instance_2;
-    instance_2.model = model;
-    instance_2.transform.translation = glm::vec3(-1.25f, -2.0f, 7.5f);
+    instance_2.cube = c1;
+    instance_2.transform.translation = glm::vec3(1.5f, 1.0f, 7.5f);
     instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
-    instance_2.transform.scale_axis = glm::vec3(3.0f, 1.0f, 1.0f);
+    instance_2.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
     
 
     Scene s;
@@ -80,6 +85,8 @@ int main()
     planes.push_back(Plane{glm::vec3(-1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0});
     planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
     planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
+
+    Scene clipped_scene = ClipScene(s, planes);
 
     while (window.isOpen())
     {
@@ -361,49 +368,6 @@ Point ProjectVertex(Point v)
     return v;
 }
 
-void DrawCube()
-{
-    glm::vec3 translation_vector = glm::vec3(-1.5f, 0.0f, 7.0f);
-    std::vector<Point> vertices;
-    vertices.push_back(Point{1, 1, 1} + translation_vector);
-    vertices.push_back(Point{-1, 1, 1} + translation_vector);
-    vertices.push_back(Point{-1, -1, 1} + translation_vector);
-    vertices.push_back(Point{1, -1, 1} + translation_vector);
-    vertices.push_back(Point{1, 1, -1} + translation_vector);
-    vertices.push_back(Point{-1, 1, -1} + translation_vector);
-    vertices.push_back(Point{-1, -1, -1} + translation_vector);
-    vertices.push_back(Point{1, -1, -1} + translation_vector);
-
-
-    std::vector<Triangle> triangles;
-    std::vector<int> indices = {0, 1, 1};
-    triangles.push_back(Triangle{indices, sf::Color::Red});
-    indices = {0, 2, 3};
-    triangles.push_back(Triangle{indices, sf::Color::Red});
-    indices = {4, 0, 3};
-    triangles.push_back(Triangle{indices, sf::Color::Green});
-    indices = {4, 3, 7};
-    triangles.push_back(Triangle{indices, sf::Color::Green}); 
-    indices = {5, 4, 7};
-    triangles.push_back(Triangle{indices, sf::Color::Blue}); 
-    indices = {5, 7, 6};
-    triangles.push_back(Triangle{indices, sf::Color::Blue}); 
-    indices = {1, 5, 6};
-    triangles.push_back(Triangle{indices, sf::Color::Yellow}); 
-    indices = {1, 6, 2};
-    triangles.push_back(Triangle{indices, sf::Color::Yellow}); 
-    indices = {4, 5, 1};
-    triangles.push_back(Triangle{indices, sf::Color::Magenta}); 
-    indices = {4, 1, 0};
-    triangles.push_back(Triangle{indices, sf::Color::Magenta}); 
-    indices = {2, 6, 7};
-    triangles.push_back(Triangle{indices, sf::Color::Cyan}); 
-    indices = {2, 7, 3};
-    triangles.push_back(Triangle{indices, sf::Color::Cyan}); 
-
-    RenderObject(vertices, triangles);
-}
-
 void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 {
     std::vector<Point> projected;
@@ -420,7 +384,8 @@ void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 
 void RenderTriangle(Triangle triangle, std::vector<Point>& projected)
 {
-    DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+    //DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+    DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
 }
 
 void RenderScene(std::vector<Instance> instances)
@@ -433,17 +398,16 @@ void RenderScene(std::vector<Instance> instances)
 
 void RenderInstance(Instance instance)
 {
-    std::vector<Point> model_transformed;
+    std::vector<Point> instance_transformed;
     //std::vector<Point> view_transformed;
     std::vector<Point> projected;
-    Model model = instance.model;
-    for(auto& cube : model.cubes)
-    {
-        for(auto& v : cube.vertices)
+    //Model model = instance.model;
+
+        for(auto& v : instance.cube.vertices)
         {
 
             Point v_model = ApplyTransform(v, instance.transform);
-            model_transformed.push_back(v_model);
+            instance_transformed.push_back(v_model);
 
             Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
             projected.push_back(ProjectVertex(v_view));
@@ -451,44 +415,34 @@ void RenderInstance(Instance instance)
 
         Point center{0.0f, 0.0f, 0.0f};
         float far_point_distance = 0.0f;
-        for(auto& p : model_transformed)
+        for(auto& p : instance_transformed)
         {
             
             center = center + p;
             
         }
 
-        cube.bounding_sphere_center.x = center.x / cube.vertices.size();
-        cube.bounding_sphere_center.y = center.y / cube.vertices.size();
-        cube.bounding_sphere_center.z = center.z / cube.vertices.size();
-        cube.bounding_sphere_center.h = center.h / cube.vertices.size();
+        instance.bounding_sphere_center.x = center.x / instance.cube.vertices.size();
+        instance.bounding_sphere_center.y = center.y / instance.cube.vertices.size();
+        instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
+        //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
 
-        cube.bounding_shpere_radius = (model_transformed[0] - cube.bounding_sphere_center).Magnitude();
+        instance.bounding_shpere_radius = (instance_transformed[0] - instance.cube.bounding_sphere_center).Magnitude();
         
         //printf("%f\n", cube.bounding_shere_radius);
 
-        for(auto& t : cube.triangles)
+        instance.cube.updateTriangles(projected);
+
+        for(auto& t : instance.cube.triangles)
         {
-            RenderTriangle(t, projected);
+            if(!t.null)
+            {
+                RenderTriangle(t, projected);
+            }
         }
 
-        model_transformed.clear();
+        instance_transformed.clear();
         projected.clear();
-    }
-
-
-    Point center{0.0f, 0.0f, 0.0f};
-    // Calculate Instance Center and Radis
-    for(auto& cube : model.cubes)
-    {
-        center = center + cube.bounding_sphere_center;
-    }
-
-    instance.bounding_sphere_center.x = center.x / instance.model.cubes.size();
-    instance.bounding_sphere_center.y = center.y / instance.model.cubes.size();
-    instance.bounding_sphere_center.z = center.z / instance.model.cubes.size();
-
-    //instance.bounding_shpere_radius = (model.cubes[0].bounding_sphere_center - instance.bounding_sphere_center).Magnitude();
 }
 
 Point ApplyTransform(Point v, Transform transform)
@@ -552,10 +506,96 @@ float SignedDistance(Plane plane, Point vertex)
     return (vertex.x*normal.x) + (vertex.y*normal.y) + (vertex.z*normal.z) + plane.GetDistanceFromOrigin();
 }
 
-Instance ClipInstanceAgainstPlane(Instance instance, Plane plane)
+Scene ClipScene(Scene scene, std::vector<Plane> planes)
 {
-    Point instance_bounding_sphere_center(instance.bounding_sphere_center.x, instance.bounding_sphere_center.y, instance.bounding_sphere_center.z);
-    float d = SignedDistance(plane, instance_bounding_sphere_center);
+    std::vector<Instance> clipped_instances;
+    for(auto& instance : scene.instances)
+    {
+        Instance clipped_instance = ClipInstance(instance, planes);
+        if(clipped_instance.null == false)
+        {
+            clipped_instances.push_back(clipped_instance);
+        }
+    }
+
+    Scene clipped_scene = scene;
+    clipped_scene.instances = clipped_instances;
+
+    return clipped_scene;
 }
+
+Instance ClipInstance(Instance instance, std::vector<Plane> planes)
+{
+    for(auto& plane : planes)
+    {
+        instance = ClipInstanceAgainstPlane(instance, plane);
+        if(instance.null == true)
+        {
+            break;
+        }
+    }
+
+    return instance;
+}
+
+Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
+{
+    Point instance_bounding_sphere_center(instance.bounding_sphere_center.x, \
+    instance.bounding_sphere_center.y, instance.bounding_sphere_center.z);
+
+    float d = SignedDistance(plane, instance_bounding_sphere_center);
+
+    printf("-------------------\n");
+    printf("instance_bounding_sphere_center.x: %f\n", instance_bounding_sphere_center.x);
+    printf("instance_bounding_sphere_center.y: %f\n", instance_bounding_sphere_center.y);
+    printf("instance_bounding_sphere_center.z: %f\n", instance_bounding_sphere_center.z);
+    printf("Signed Distance: %f\n", d);
+    printf("instance.bounding_shpere_radius: %f\n", instance.cube.bounding_shpere_radius);
+
+    if(d > instance.cube.bounding_shpere_radius)
+    {
+        return instance;
+    }else if(d < -instance.cube.bounding_shpere_radius)
+    {
+        instance.null = true;
+        return instance;
+    }
+
+    Instance clipped_instance = instance;
+    clipped_instance.cube.triangles = ClipTrianglesAgainstPlane(instance.cube.triangles, plane);
+
+    return clipped_instance;
+}
+
+std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane)
+{
+    std::vector<Triangle> clipped_triangles;
+
+    for(auto& triangle : triangles)
+    {
+        clipped_triangles.push_back(ClipTriangle(triangle, plane));
+    }
+
+    return clipped_triangles;
+}
+
+Triangle ClipTriangle(Triangle triangle, Plane plane)
+{
+    float d0 = SignedDistance(plane, triangle.vertices[0]);
+    float d1 = SignedDistance(plane, triangle.vertices[1]);
+    float d2 = SignedDistance(plane, triangle.vertices[2]);
+
+    if(d0 >= 0 && d1 >= 0 && d2 >= 0)
+    {
+        return triangle;
+    }
+
+    Triangle test;
+    test.null = true;
+
+    return test;
+}
+
+
 
 
