@@ -1,4 +1,65 @@
-#include "Cube.h"
+#include "../include/Cube.h"
+
+Cube::Cube()
+{
+    vertices.push_back(Point{1, 1, 1});
+    vertices.push_back(Point{-1, 1, 1});
+    vertices.push_back(Point{-1, -1, 1});
+    vertices.push_back(Point{1, -1, 1});
+    vertices.push_back(Point{1, 1, -1});
+    vertices.push_back(Point{-1, 1, -1});
+    vertices.push_back(Point{-1, -1, -1});
+    vertices.push_back(Point{1, -1, -1});
+
+    //std::vector<int> indices = {0, 1, 1};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[0], \
+    vertices[1], vertices[1]}, sf::Color::Red});
+
+    //indices = {0, 2, 3};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[0], \
+    vertices[2], vertices[3]}, sf::Color::Red});
+
+    //indices = {4, 0, 3};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[4], \
+    vertices[0], vertices[3]}, sf::Color::Red});
+
+    //indices = {4, 3, 7};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[4], \
+    vertices[3], vertices[7]}, sf::Color::Red}); 
+
+    //indices = {5, 4, 7};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[5], \
+    vertices[4], vertices[7]}, sf::Color::Red});
+
+    //indices = {5, 7, 6};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[5], \
+    vertices[7], vertices[6]}, sf::Color::Red}); 
+
+    //indices = {1, 5, 6};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[1], \
+    vertices[5], vertices[6]}, sf::Color::Red});
+
+    //indices = {1, 6, 2};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[1], \
+    vertices[6], vertices[2]}, sf::Color::Red});
+
+    //indices = {4, 5, 1};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[4], \
+    vertices[5], vertices[1]}, sf::Color::Red}); 
+
+    //indices = {4, 1, 0};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[4], \
+    vertices[1], vertices[0]}, sf::Color::Red}); 
+
+    //indices = {2, 6, 7};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[2], \
+    vertices[6], vertices[7]}, sf::Color::Red}); 
+
+    //indices = {2, 7, 3};
+    triangles.push_back(Triangle{std::vector<Point>{vertices[2], \
+    vertices[7], vertices[3]}, sf::Color::Red});
+}
+    
 
 void Cube::updateTriangles(std::vector<Point> projected)
 {

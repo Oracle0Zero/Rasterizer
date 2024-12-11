@@ -4,55 +4,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include "Camera.h"
-#include "Triangle.h"
-#include "Plane.h"
-#include "Model.h"
-#include "Point.h"
-#include "Instance.h"
-#include "Scene.h"
-
-constexpr int canvas_width = 800;
-constexpr int canvas_height = 800;
-
-constexpr int viewport_width = 1;
-constexpr int viewport_height = 1;
-
-float d = 1.0f;
-
-void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color);
-glm::vec3 CanvasToViewPort(int x, int y);
-void DrawLine(Point p0, Point p1, sf::Color color);
-std::vector<float> Interpolate(float i0, float d0, float i1, float d1);
-void DrawWireframeTriangle(Point p0, Point p1, Point p2, sf::Color color);
-void SwapPoints(Point& p0, Point& p1);
-void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color);
-sf::Color ModifiedColor(sf::Color color, float modifier);
-glm::vec3 ViewportToCanvas(float x, float y, float d);
-Point ProjectVertex(Point v);
-void DrawCube();
-void RenderTriangle(Triangle triangle, std::vector<Point>& projected);
-void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles);
-void RenderScene(std::vector<Instance> instances);
-void RenderInstance(Instance instance);
-Point ApplyTransform(Point v, Transform transform);
-Point Scale(Point v, glm::vec3 scale_axis);
-Point Rotate(Point v, glm::vec3 rotation_axis);
-Point Translate(Point v, glm::vec3 translation_vector);
-Point ApplyCameraTransform(Point v, Transform transform);
-float SignedDistance(Plane plane, Point vertex);
-float SignedDistance(Plane plane, Point vertex);
-Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane);
-std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane);
-Triangle ClipTriangle(Triangle triangle, Plane plane);
-Scene ClipScene(Scene scene, std::vector<Plane> planes);
-Instance ClipInstance(Instance instance, std::vector<Plane> planes);
-
-sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
-sf::RectangleShape pixel(sf::Vector2f(1, 1));
-
-
-Camera c;
+#include "../include/Camera.h"
+#include "../include/Triangle.h"
+#include "../include/Plane.h"
+#include "../include/Model.h"
+#include "../include/Instance.h"
+#include "../include/Scene.h"
+#include "../include/Utils.h"
 
 int main()
 {
@@ -133,6 +91,8 @@ int main()
     return 0;
 }
 
+
+
 void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color)
 {
     float c_x = (float)canvas_width / 2 + x;
@@ -158,14 +118,7 @@ void DrawLine(Point p0, Point p1, sf::Color color)
     float dx = p1.x - p0.x;
     float dy = p1.y - p0.y;
 
-    /*
-    printf("p0.x: %f\n", p0.x);
-    printf("p0.y: %f\n", p0.y);
-    printf("p1.x: %f\n", p1.x);
-    printf("p1.y: %f\n", p1.y);
-    printf("dx: %f\n", dx);
-    printf("dy: %f\n", dy);
-    */
+
 
     if(abs(dx) > abs(dy))
     {
@@ -264,15 +217,6 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
     std::vector<float> x02 = Interpolate(p0.y, p0.x, p2.y, p2.x);
     std::vector<float> h02 = Interpolate(p0.y, p0.h, p2.y, p2.h);
 
-           
-    // std::cout << "--- h02 --- " << "\n";
-    // for(int i = 0; i < h02.size(); i++)
-    // {
-    //     std::cout << "h02:" << h02[i] << "\n";
-    // }
-    
-
-    
     // Concatenate short sides
     x01.pop_back();
     std::vector<float> x012;
@@ -283,13 +227,6 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
     std::vector<float> h012;
     h012.insert(h012.end(), h01.begin(), h01.end());
     h012.insert(h012.end(), h12.begin(), h12.end());
-
-    /*
-    std::cout << "x01 size: " << x01.size() << "\n";
-    std::cout << "x12 size: " << x12.size() << "\n";
-    std::cout << "x02 size: " << x02.size() << "\n";
-    std::cout << "x012 size: " << x012.size() << "\n";
-    */
 
     std::vector<float> x_left;
     std::vector<float> x_right;
@@ -595,6 +532,8 @@ Triangle ClipTriangle(Triangle triangle, Plane plane)
 
     return test;
 }
+
+
 
 
 

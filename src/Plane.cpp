@@ -1,4 +1,4 @@
-#include "Plane.h"
+#include "../include/Plane.h"
 
 Plane::Plane(glm::vec3 normal, float D) : m_normal {normal}, m_D {D}
 {

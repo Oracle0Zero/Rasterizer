@@ -1,8 +1,8 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include "Model.h"
-#include "Transform.h"
+#include "../include/Transform.h"
+#include "../include/Cube.h"
 
 class Instance
 {
@@ -10,7 +10,9 @@ public:
     Cube cube;
     glm::vec3 translation_vector;
     Transform transform;
-    glm::vec3 bounding_sphere_center;
+    Point bounding_sphere_center;
     float bounding_shpere_radius;
     bool null = false;
+
+    void InitialBoundingSphere();
 };

@@ -1,4 +1,10 @@
-#include "Point.h"
+#include "../include/Point.h"
+
+
+Point::Point()
+{
+    x = 0.0; y = 0.0; z = 0.0; h = 1.0;
+}
 
 Point operator+(const Point& p1, const glm::vec3& p2)
 {
@@ -8,6 +14,9 @@ Point operator+(const Point& p1, const glm::vec3& p2)
     new_point.z = p1.z + p2.z;
     return new_point;
 }
+
+
+
 
 Point operator+(const Point& p1, const Point& p2)
 {

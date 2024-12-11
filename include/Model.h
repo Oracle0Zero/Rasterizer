@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "Cube.h"
+#include "../include/Cube.h"
 
 class Model
 {

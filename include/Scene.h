@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "Instance.h"
+#include "../include/Instance.h"
 
 class Scene
 {

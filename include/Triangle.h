@@ -3,7 +3,7 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 
-#include "Point.h"
+#include "../include/Point.h"
 
 class Triangle
 {
