@@ -12,6 +12,8 @@
 #include "../include/Scene.h"
 #include "../include/Utils.h"
 
+
+Scene s;
 int main()
 {
     c.SetCameraPosition(glm::vec3(0.0f, 0.0f, -d));
@@ -22,20 +24,19 @@ int main()
 
     Instance instance_1;
     instance_1.cube = c1;
-    instance_1.transform.translation = glm::vec3(1.0f, 1.0f, 7.0f);
+    instance_1.transform.translation = glm::vec3(-1.5f, 1.0f, 7.0f);
     instance_1.transform.rotation_axis = glm::vec3(23.0f, 29.0f, 0.0f);
     instance_1.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
-    
+
     Instance instance_2;
     instance_2.cube = c1;
     instance_2.transform.translation = glm::vec3(1.5f, 1.0f, 7.5f);
     instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
     instance_2.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
-    
 
-    Scene s;
+
     s.instances.push_back(instance_1);
-    s.instances.push_back(instance_2);
+    //s.instances.push_back(instance_2);
 
     std::vector<Plane> planes;
     planes.push_back(Plane{glm::vec3(0, 0, 1), -d});
@@ -44,7 +45,7 @@ int main()
     planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
     planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
 
-    Scene clipped_scene = ClipScene(s, planes);
+    //Scene clipped_scene = ClipScene(s, planes);
 
     while (window.isOpen())
     {
@@ -55,33 +56,9 @@ int main()
                 window.close();
         }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
-        {
-            c.camera_transform.translation.z += 0.05f;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
-        {
-            c.camera_transform.translation.z -= 0.05f;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
-        {
-            c.camera_transform.translation.x -= 0.05f;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
-        {
-            c.camera_transform.translation.x += 0.05f;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-        {
-            c.camera_transform.rotation_axis.y += 0.5f;
-        }
+        ProcessEvents();
 
         window.clear(sf::Color::White);
-
 
         RenderScene(s.instances);
 
@@ -90,8 +67,6 @@ int main()
 
     return 0;
 }
-
-
 
 void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, sf::Color color)
 {
@@ -364,9 +339,9 @@ void RenderInstance(Instance instance)
         instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
         //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
 
-        instance.bounding_shpere_radius = (instance_transformed[0] - instance.cube.bounding_sphere_center).Magnitude();
+        instance.bounding_sphere_radius = (instance_transformed[0] - instance.cube.bounding_sphere_center).Magnitude();
         
-        //printf("%f\n", cube.bounding_shere_radius);
+        printf("%f\n", instance.bounding_sphere_radius);
 
         instance.cube.updateTriangles(projected);
 
@@ -533,7 +508,49 @@ Triangle ClipTriangle(Triangle triangle, Plane plane)
     return test;
 }
 
+void ProcessEvents()
+{
 
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+        {
+            c.camera_transform.translation.z += 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+        {
+            c.camera_transform.translation.z -= 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+        {
+            c.camera_transform.translation.x -= 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            c.camera_transform.translation.x += 0.05f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        {
+            scale_x -= 0.005f;
+            scale_y -= 0.005f;
+            scale_z -= 0.005f;
+
+            s.instances[0].transform.scale_axis = glm::vec3(scale_x, scale_y, scale_z);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        {
+            scale_x += 0.005f;
+            scale_y += 0.005f;
+            scale_z += 0.005f;
+
+            s.instances[0].transform.scale_axis = glm::vec3(scale_x, scale_y, scale_z);
+        }
+
+
+}
 
 
 

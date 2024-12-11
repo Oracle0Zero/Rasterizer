@@ -11,7 +11,7 @@ public:
     glm::vec3 translation_vector;
     Transform transform;
     Point bounding_sphere_center;
-    float bounding_shpere_radius;
+    float bounding_sphere_radius;
     bool null = false;
 
     void InitialBoundingSphere();

@@ -18,5 +18,5 @@ void Instance::InitialBoundingSphere()
     bounding_sphere_center.z = center.z / cube.vertices.size();
     //bounding_sphere_center.h = center.h / cube.vertices.size();
 
-    bounding_shpere_radius = (cube.vertices[0] - bounding_sphere_center).Magnitude();
+    bounding_sphere_radius = (cube.vertices[0] - bounding_sphere_center).Magnitude();
 }
