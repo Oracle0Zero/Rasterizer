@@ -14,6 +14,8 @@
 
 
 Scene s;
+std::vector<Plane> planes;
+
 int main()
 {
     c.SetCameraPosition(glm::vec3(0.0f, 0.0f, -d));
@@ -24,9 +26,9 @@ int main()
 
     Instance instance_1;
     instance_1.cube = c1;
-    instance_1.transform.translation = glm::vec3(-1.5f, 1.0f, 7.0f);
+    instance_1.transform.translation = glm::vec3(0.0f, 0.0f, 7.0f);
     instance_1.transform.rotation_axis = glm::vec3(23.0f, 29.0f, 0.0f);
-    instance_1.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
+    instance_1.transform.scale_axis = glm::vec3(1.5f, 1.5f, 1.5f);
 
     Instance instance_2;
     instance_2.cube = c1;
@@ -37,13 +39,12 @@ int main()
 
     s.instances.push_back(instance_1);
     //s.instances.push_back(instance_2);
-
-    std::vector<Plane> planes;
-    planes.push_back(Plane{glm::vec3(0, 0, 1), -d});
-    planes.push_back(Plane{glm::vec3(1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0});
-    planes.push_back(Plane{glm::vec3(-1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0});
-    planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
-    planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0});
+    
+    planes.push_back(Plane{glm::vec3(0, 0, 1), -d, "near"});
+    planes.push_back(Plane{glm::vec3(1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0, "left"});
+    planes.push_back(Plane{glm::vec3(-1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0, "right"});
+    planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0, "bottom"});
+    planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0, "top"});
 
     //Scene clipped_scene = ClipScene(s, planes);
 
@@ -309,7 +310,7 @@ void RenderScene(std::vector<Instance> instances)
 }
 
 void RenderInstance(Instance instance)
-{
+{ 
     std::vector<Point> instance_transformed;
     //std::vector<Point> view_transformed;
     std::vector<Point> projected;
@@ -325,8 +326,14 @@ void RenderInstance(Instance instance)
             projected.push_back(ProjectVertex(v_view));
         }
 
+
+
+
+        instance.cube.updateTriangles(projected);
+
+        
         Point center{0.0f, 0.0f, 0.0f};
-        float far_point_distance = 0.0f;
+
         for(auto& p : instance_transformed)
         {
             
@@ -339,12 +346,23 @@ void RenderInstance(Instance instance)
         instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
         //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
 
-        instance.bounding_sphere_radius = (instance_transformed[0] - instance.cube.bounding_sphere_center).Magnitude();
+        Point difference_point = instance_transformed[0] - instance.bounding_sphere_center;
+        glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
+
+        instance.bounding_sphere_radius = glm::length(difference_vector);
         
-        printf("%f\n", instance.bounding_sphere_radius);
+        //printf("difference_vector.x: %f\n", difference_vector.x);
+        //printf("difference_vector.y: %f\n", difference_vector.y);
+        //printf("difference_vector.z: %f\n", difference_vector.z);
+        printf("instance.bounding_shpere_radius: %f\n", instance.bounding_sphere_radius);
 
-        instance.cube.updateTriangles(projected);
 
+        Instance clipped_instance = ClipInstance(instance, planes);
+
+    
+    std::cout << "Instance.null: " << clipped_instance.null << std::endl;
+    if(clipped_instance.null == false)
+    {
         for(auto& t : instance.cube.triangles)
         {
             if(!t.null)
@@ -352,6 +370,8 @@ void RenderInstance(Instance instance)
                 RenderTriangle(t, projected);
             }
         }
+
+    }
 
         instance_transformed.clear();
         projected.clear();
@@ -440,8 +460,8 @@ Instance ClipInstance(Instance instance, std::vector<Plane> planes)
 {
     for(auto& plane : planes)
     {
-        instance = ClipInstanceAgainstPlane(instance, plane);
-        if(instance.null == true)
+        Instance clipped_instance = ClipInstanceAgainstPlane(instance, plane);
+        if(clipped_instance.null == true)
         {
             break;
         }
@@ -457,24 +477,26 @@ Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
 
     float d = SignedDistance(plane, instance_bounding_sphere_center);
 
-    printf("-------------------\n");
-    printf("instance_bounding_sphere_center.x: %f\n", instance_bounding_sphere_center.x);
-    printf("instance_bounding_sphere_center.y: %f\n", instance_bounding_sphere_center.y);
-    printf("instance_bounding_sphere_center.z: %f\n", instance_bounding_sphere_center.z);
+   // printf("-------------------\n");
+    std::cout << "Plane: " << plane.getName() << "\n";
+    //printf("instance_bounding_sphere_center.x: %f\n", instance_bounding_sphere_center.x);
+    //printf("instance_bounding_sphere_center.y: %f\n", instance_bounding_sphere_center.y);
+    //printf("instance_bounding_sphere_center.z: %f\n", instance_bounding_sphere_center.z);
+    //printf("instance.bounding_sphere_radius: %f\n", instance.bounding_sphere_radius);
     printf("Signed Distance: %f\n", d);
-    printf("instance.bounding_shpere_radius: %f\n", instance.cube.bounding_shpere_radius);
-
-    if(d > instance.cube.bounding_shpere_radius)
+    
+    Instance clipped_instance = instance;   
+    if(d > instance.bounding_sphere_radius)
     {
         return instance;
-    }else if(d < -instance.cube.bounding_shpere_radius)
+    }else if(d < -instance.bounding_sphere_radius)
     {
         instance.null = true;
         return instance;
+    }else
+    {
+        clipped_instance.cube.triangles = ClipTrianglesAgainstPlane(instance.cube.triangles, plane);
     }
-
-    Instance clipped_instance = instance;
-    clipped_instance.cube.triangles = ClipTrianglesAgainstPlane(instance.cube.triangles, plane);
 
     return clipped_instance;
 }
@@ -500,6 +522,11 @@ Triangle ClipTriangle(Triangle triangle, Plane plane)
     if(d0 >= 0 && d1 >= 0 && d2 >= 0)
     {
         return triangle;
+    }else if(d0 < 0 && d1 < 0 && d2 < 0)
+    {
+        Triangle clipped_triangle;
+        clipped_triangle.null = true;
+        return clipped_triangle;
     }
 
     Triangle test;
@@ -533,22 +560,38 @@ void ProcessEvents()
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
         {
-            scale_x -= 0.005f;
-            scale_y -= 0.005f;
-            scale_z -= 0.005f;
-
-            s.instances[0].transform.scale_axis = glm::vec3(scale_x, scale_y, scale_z);
+            translate_x -= 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
         }
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
         {
-            scale_x += 0.005f;
-            scale_y += 0.005f;
-            scale_z += 0.005f;
-
-            s.instances[0].transform.scale_axis = glm::vec3(scale_x, scale_y, scale_z);
+            translate_x += 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+        {
+            translate_y += 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
         }
 
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+        {
+            translate_y -= 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Add))
+        {
+            translate_z += 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Subtract))
+        {
+            translate_z -= 0.005f;
+            s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
+        }
 
 }
 

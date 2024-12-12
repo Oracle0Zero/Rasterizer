@@ -22,7 +22,7 @@ constexpr int viewport_width = 1;
 constexpr int viewport_height = 1;
 
 float scale_x = 1.0f, scale_y = 1.0f, scale_z = 1.0f;
-
+float translate_x = 0.0f, translate_y = 0.0f, translate_z = 7.0f;
 
 sf::RenderWindow window(sf::VideoMode(canvas_width, canvas_height), "Rasterizer");
 sf::RectangleShape pixel(sf::Vector2f(1, 1));
