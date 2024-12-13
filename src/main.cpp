@@ -297,8 +297,8 @@ void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 
 void RenderTriangle(Triangle triangle, std::vector<Point>& projected)
 {
-    //DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
-    DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
+    DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+    //DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
 }
 
 void RenderScene(std::vector<Instance> instances)
@@ -326,19 +326,15 @@ void RenderInstance(Instance instance)
             projected.push_back(ProjectVertex(v_view));
         }
 
-
-
-
-        instance.cube.updateTriangles(projected);
+        //instance.cube.updateTriangles(projected);
+        instance.cube.updateTriangles(instance_transformed);
 
         
         Point center{0.0f, 0.0f, 0.0f};
 
         for(auto& p : instance_transformed)
         {
-            
             center = center + p;
-            
         }
 
         instance.bounding_sphere_center.x = center.x / instance.cube.vertices.size();
@@ -354,17 +350,24 @@ void RenderInstance(Instance instance)
         //printf("difference_vector.x: %f\n", difference_vector.x);
         //printf("difference_vector.y: %f\n", difference_vector.y);
         //printf("difference_vector.z: %f\n", difference_vector.z);
-        printf("instance.bounding_shpere_radius: %f\n", instance.bounding_sphere_radius);
+        //printf("instance.bounding_shpere_radius: %f\n", instance.bounding_sphere_radius);
 
 
-        Instance clipped_instance = ClipInstance(instance, planes);
+    Instance clipped_instance = ClipInstance(instance, planes);
 
+    //std::cout << "-------" << "\n";
+    for(auto triangle : clipped_instance.cube.triangles)
+    {
+        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
+    }
     
-    std::cout << "Instance.null: " << clipped_instance.null << std::endl;
+    //std::cout << "Instance.null: " << clipped_instance.null << std::endl;
     if(clipped_instance.null == false)
     {
-        for(auto& t : instance.cube.triangles)
+        //std::cout << "---------------" << "\n";
+        for(auto t : clipped_instance.cube.triangles)
         {
+            //std::cout << "Triangle: " << t.null << "\n";
             if(!t.null)
             {
                 RenderTriangle(t, projected);
@@ -458,16 +461,30 @@ Scene ClipScene(Scene scene, std::vector<Plane> planes)
 
 Instance ClipInstance(Instance instance, std::vector<Plane> planes)
 {
-    for(auto& plane : planes)
+    Instance clipped_instance = instance;
+    for(auto plane : planes)
     {
-        Instance clipped_instance = ClipInstanceAgainstPlane(instance, plane);
-        if(clipped_instance.null == true)
+        clipped_instance = ClipInstanceAgainstPlane(instance, plane);
+        //if(clipped_instance.null == true)
+        //{
+            //break;
+        //}
+
+        //std::cout << "-------Plane: " << plane.getName() << "-------\n";
+        for(auto triangle : clipped_instance.cube.triangles)
         {
-            break;
+           //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
         }
     }
 
-    return instance;
+    std::cout << "-------" << "-------\n";
+    for(auto triangle : clipped_instance.cube.triangles)
+    {
+        std::cout << "clipped_triangle.null: " << triangle.null << "\n";
+    }
+
+
+    return clipped_instance;
 }
 
 Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
@@ -477,25 +494,34 @@ Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
 
     float d = SignedDistance(plane, instance_bounding_sphere_center);
 
-   // printf("-------------------\n");
-    std::cout << "Plane: " << plane.getName() << "\n";
+    //printf("-------------------\n");
+    //std::cout << "Plane: " << plane.getName() << "\n";
     //printf("instance_bounding_sphere_center.x: %f\n", instance_bounding_sphere_center.x);
     //printf("instance_bounding_sphere_center.y: %f\n", instance_bounding_sphere_center.y);
     //printf("instance_bounding_sphere_center.z: %f\n", instance_bounding_sphere_center.z);
     //printf("instance.bounding_sphere_radius: %f\n", instance.bounding_sphere_radius);
-    printf("Signed Distance: %f\n", d);
+    //printf("Signed Distance: %f\n", d);
     
     Instance clipped_instance = instance;   
     if(d > instance.bounding_sphere_radius)
     {
+        //std::cout << "Within" << "\n";
         return instance;
     }else if(d < -instance.bounding_sphere_radius)
     {
+        //std::cout << "Outside" << "\n";
         instance.null = true;
         return instance;
     }else
     {
+        //std::cout << "Between" << "\n";
         clipped_instance.cube.triangles = ClipTrianglesAgainstPlane(instance.cube.triangles, plane);
+    }
+
+    //std::cout << "-------Plane: " << plane.getName() << "-------\n";
+    for(auto triangle : clipped_instance.cube.triangles)
+    {
+        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
     }
 
     return clipped_instance;
@@ -504,10 +530,13 @@ Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
 std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane)
 {
     std::vector<Triangle> clipped_triangles;
-
-    for(auto& triangle : triangles)
+    //std::cout << "-------Plane: " << plane.getName() << "-------\n";
+    for(auto triangle : triangles)
     {
-        clipped_triangles.push_back(ClipTriangle(triangle, plane));
+        Triangle clipped_triangle = ClipTriangle(triangle, plane);
+        //std::cout << "--------------"  << "\n";
+        //std::cout << "clipped_triangle.null: " << clipped_triangle.null << "\n";
+        clipped_triangles.push_back(clipped_triangle);
     }
 
     return clipped_triangles;
@@ -518,18 +547,22 @@ Triangle ClipTriangle(Triangle triangle, Plane plane)
     float d0 = SignedDistance(plane, triangle.vertices[0]);
     float d1 = SignedDistance(plane, triangle.vertices[1]);
     float d2 = SignedDistance(plane, triangle.vertices[2]);
+    //std::cout << "------- Triangle -------" << "\n";
+    //std::cout << "d0: " << d0 << "\n";
+    //std::cout << "d1: " << d1 << "\n";
+    //std::cout << "d2: " << d2 << "\n";
 
     if(d0 >= 0 && d1 >= 0 && d2 >= 0)
     {
         return triangle;
     }else if(d0 < 0 && d1 < 0 && d2 < 0)
     {
-        Triangle clipped_triangle;
+        Triangle clipped_triangle = triangle;
         clipped_triangle.null = true;
         return clipped_triangle;
     }
 
-    Triangle test;
+    Triangle test = triangle;
     test.null = true;
 
     return test;
