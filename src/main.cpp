@@ -298,7 +298,10 @@ void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 void RenderTriangle(Triangle triangle, std::vector<Point>& projected)
 {
     DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+    //DrawFilledTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+
     //DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
+    //DrawFilledTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
 }
 
 void RenderScene(std::vector<Instance> instances)
@@ -328,11 +331,11 @@ void RenderInstance(Instance instance)
 
         //instance.cube.updateTriangles(projected);
         instance.cube.updateTriangles(instance_transformed);
-
         
         Point center{0.0f, 0.0f, 0.0f};
 
         for(auto& p : instance_transformed)
+        //for(auto& p : projected)
         {
             center = center + p;
         }
@@ -343,6 +346,7 @@ void RenderInstance(Instance instance)
         //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
 
         Point difference_point = instance_transformed[0] - instance.bounding_sphere_center;
+        //Point difference_point = projected[0] - instance.bounding_sphere_center;
         glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
 
         instance.bounding_sphere_radius = glm::length(difference_vector);
@@ -370,6 +374,12 @@ void RenderInstance(Instance instance)
             //std::cout << "Triangle: " << t.null << "\n";
             if(!t.null)
             {
+                //Triangle clipped_triangle = t;
+                //clipped_triangle.vertices.clear();
+                //for(auto p : t.vertices)
+                //{
+                    //clipped_triangle.vertices.push_back(ApplyCameraTransform(p, c.camera_transform));
+                //}
                 RenderTriangle(t, projected);
             }
         }
@@ -464,7 +474,7 @@ Instance ClipInstance(Instance instance, std::vector<Plane> planes)
     Instance clipped_instance = instance;
     for(auto plane : planes)
     {
-        clipped_instance = ClipInstanceAgainstPlane(instance, plane);
+        clipped_instance = ClipInstanceAgainstPlane(clipped_instance, plane);
         //if(clipped_instance.null == true)
         //{
             //break;
@@ -477,17 +487,17 @@ Instance ClipInstance(Instance instance, std::vector<Plane> planes)
         }
     }
 
-    std::cout << "-------" << "-------\n";
+    //std::cout << "-------" << "-------\n";
     for(auto triangle : clipped_instance.cube.triangles)
     {
-        std::cout << "clipped_triangle.null: " << triangle.null << "\n";
+        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
     }
 
 
     return clipped_instance;
 }
 
-Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
+Instance ClipInstanceAgainstPlane(Instance instance, Plane plane)
 {
     Point instance_bounding_sphere_center(instance.bounding_sphere_center.x, \
     instance.bounding_sphere_center.y, instance.bounding_sphere_center.z);
@@ -529,20 +539,24 @@ Instance ClipInstanceAgainstPlane(Instance& instance, Plane plane)
 
 std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane)
 {
-    std::vector<Triangle> clipped_triangles;
+    std::vector<Triangle> clipped_triangles_return;
     //std::cout << "-------Plane: " << plane.getName() << "-------\n";
     for(auto triangle : triangles)
     {
-        Triangle clipped_triangle = ClipTriangle(triangle, plane);
+        std::vector<Triangle> clipped_triangles = ClipTriangle(triangle, plane);
         //std::cout << "--------------"  << "\n";
         //std::cout << "clipped_triangle.null: " << clipped_triangle.null << "\n";
-        clipped_triangles.push_back(clipped_triangle);
+
+        for(auto clipped_triangle : clipped_triangles)
+        {
+            clipped_triangles_return.push_back(clipped_triangle);
+        }
     }
 
-    return clipped_triangles;
+    return clipped_triangles_return;
 }
 
-Triangle ClipTriangle(Triangle triangle, Plane plane)
+std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
 {
     float d0 = SignedDistance(plane, triangle.vertices[0]);
     float d1 = SignedDistance(plane, triangle.vertices[1]);
@@ -552,20 +566,120 @@ Triangle ClipTriangle(Triangle triangle, Plane plane)
     //std::cout << "d1: " << d1 << "\n";
     //std::cout << "d2: " << d2 << "\n";
 
+    std::vector<Triangle> clipped_triangles;
     if(d0 >= 0 && d1 >= 0 && d2 >= 0)
     {
-        return triangle;
+        clipped_triangles.push_back(triangle);
+
+        return clipped_triangles;
+
     }else if(d0 < 0 && d1 < 0 && d2 < 0)
     {
-        Triangle clipped_triangle = triangle;
-        clipped_triangle.null = true;
-        return clipped_triangle;
+        triangle.null = true;
+        clipped_triangles.push_back(triangle);
+
+        return clipped_triangles;
     }
+    else if(d0 > 0 && d1 < 0 && d2 < 0)
+    {
+        Point new_v1 = Intersection(triangle.vertices[0], triangle.vertices[1], plane);
+        Point new_v2 = Intersection(triangle.vertices[0], triangle.vertices[2], plane);
+
+        triangle.vertices[1] = new_v1;
+        triangle.vertices[2] = new_v2;
+
+        clipped_triangles.push_back(triangle);
+
+        return clipped_triangles;
+
+    }else if(d1 > 0 && d0 < 0 && d2 < 0)
+    {
+        Point new_v0 = Intersection(triangle.vertices[1], triangle.vertices[0], plane);
+        Point new_v2 = Intersection(triangle.vertices[1], triangle.vertices[2], plane);
+
+        triangle.vertices[0] = new_v0;
+        triangle.vertices[2] = new_v2;
+
+        clipped_triangles.push_back(triangle);
+
+        return clipped_triangles;
+
+    }else if(d2 > 0 && d0 < 0 && d1 < 0)
+    {
+        Point new_v0 = Intersection(triangle.vertices[2], triangle.vertices[0], plane);
+        Point new_v1 = Intersection(triangle.vertices[2], triangle.vertices[1], plane);
+
+        triangle.vertices[0] = new_v0;
+        triangle.vertices[1] = new_v1;
+
+        clipped_triangles.push_back(triangle);
+
+        return clipped_triangles;
+
+    }
+    
+    else if(d0 < 0 && d1 > 0 && d2 > 0)
+    {
+        
+        Point new_v1 = Intersection(triangle.vertices[1], triangle.vertices[0], plane);
+        Point new_v2 = Intersection(triangle.vertices[2], triangle.vertices[0], plane);
+
+        Triangle clipped_triangle_1 = triangle;
+        clipped_triangle_1.vertices[0] = new_v1;
+    
+        Triangle clipped_triangle_2 = triangle;
+        clipped_triangle_2.vertices[0] = new_v1;
+        clipped_triangle_2.vertices[1] = new_v2;
+        clipped_triangle_2.vertices[2] = new_v2;
+
+        clipped_triangles.push_back(clipped_triangle_1);
+        clipped_triangles.push_back(clipped_triangle_2);
+
+        return clipped_triangles;
+
+    }else if(d1 < 0 && d0 > 0 && d2 > 0)
+    {
+        Point new_v0 = Intersection(triangle.vertices[0], triangle.vertices[1], plane);
+        Point new_v2 = Intersection(triangle.vertices[2], triangle.vertices[1], plane);
+
+        Triangle clipped_triangle_1 = triangle;
+        clipped_triangle_1.vertices[0] = new_v0;
+    
+        Triangle clipped_triangle_2 = triangle;
+        clipped_triangle_2.vertices[0] = new_v0;
+        clipped_triangle_2.vertices[1] = new_v2;
+        clipped_triangle_2.vertices[2] = new_v2;
+
+        clipped_triangles.push_back(clipped_triangle_1);
+        clipped_triangles.push_back(clipped_triangle_2);
+
+        return clipped_triangles;
+
+    }else if(d2 < 0 && d0 > 0 && d1 > 0)
+    {
+        Point new_v0 = Intersection(triangle.vertices[0], triangle.vertices[2], plane);
+        Point new_v1 = Intersection(triangle.vertices[1], triangle.vertices[2], plane);
+
+        Triangle clipped_triangle_1 = triangle;
+        clipped_triangle_1.vertices[0] = new_v0;
+    
+        Triangle clipped_triangle_2 = triangle;
+        clipped_triangle_2.vertices[0] = new_v0;
+        clipped_triangle_2.vertices[1] = new_v1;
+        clipped_triangle_2.vertices[2] = new_v1;
+
+        clipped_triangles.push_back(clipped_triangle_1);
+        clipped_triangles.push_back(clipped_triangle_2);
+
+        return clipped_triangles;
+    }
+    
 
     Triangle test = triangle;
     test.null = true;
+    clipped_triangles.push_back(test);
 
-    return test;
+    return clipped_triangles;
 }
 
 void ProcessEvents()
@@ -628,6 +742,26 @@ void ProcessEvents()
 
 }
 
+Point Intersection(Point A, Point B, Plane plane)
+{
+    Point new_b;
+    glm::vec3 vector_new_b;
+    glm::vec3 vector_A(A.x, A.y, A.z);
+    glm::vec3 vector_B(B.x, B.y, B.z);
+    glm::vec3 difference_vector = vector_B - vector_A;
+    float D = plane.GetDistanceFromOrigin();
+    glm::vec3 plane_normal = plane.GetNormal();
+
+    float t = (-1*D - glm::dot(plane_normal, vector_A)) / glm::dot(plane_normal, difference_vector);
+
+    vector_new_b = vector_A + t*(difference_vector);
+
+    new_b.x = vector_new_b.x;
+    new_b.y = vector_new_b.y;
+    new_b.x = vector_new_b.z;
+
+    return new_b;
+}
 
 
 
