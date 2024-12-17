@@ -8,7 +8,7 @@ LOADLIBES = -lsfml-graphics -lsfml-window -lsfml-system -lGL -lGLU -lSOIL -lglfw
 
 main.exec: main.o Camera.o Cube.o Instance.o Model.o Plane.o Point.o Scene.o Transform.o Triangle.o Utils.o
 	$(CC) $^ $(CPPFLAGS) $(LOADLIBES) -o $@
-	#rm -r *.o
+	rm -r *.o
 
 %.o: %.cpp
 	$(CC) -c $(CPPFLAGS) $< $(OUTPUT_OPTION)
