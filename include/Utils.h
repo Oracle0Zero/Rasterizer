@@ -41,7 +41,7 @@ sf::Color ModifiedColor(sf::Color color, float modifier);
 glm::vec3 ViewportToCanvas(float x, float y, float d);
 Point ProjectVertex(Point v);
 void DrawCube();
-void RenderTriangle(Triangle triangle, std::vector<Point>& projected);
+void RenderTriangle(Triangle triangle);
 void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles);
 void RenderScene(std::vector<Instance> instances);
 void RenderInstance(Instance instance);

@@ -8,8 +8,8 @@
 class Triangle
 {
 public:
-    std::vector<int> point_indices;
-    std::vector<Point> vertices;
     sf::Color color;
+    std::vector<Point> vertices;
     bool null = false;
+    Triangle(std::vector<Point> vertices_arg, sf::Color color_arg, bool null_arg = false);
 };

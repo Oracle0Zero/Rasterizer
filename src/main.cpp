@@ -16,13 +16,20 @@
 Scene s;
 std::vector<Plane> planes;
 
+//sf::Image frameBuffer;
+
 int main()
 {
-    c.SetCameraPosition(glm::vec3(0.0f, 0.0f, -d));
+    //frameBuffer.create(canvas_width, canvas_height, sf::Color::White);
+
+    //sf::Texture frameTexture;
+    //sf::Sprite frameSprite;
+
+    c.SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
     Cube c1;
 
-    Model model;
-    model.cubes.push_back(c1);
+    //Model model;
+    //model.cubes.push_back(c1);
 
     Instance instance_1;
     instance_1.cube = c1;
@@ -62,8 +69,17 @@ int main()
         window.clear(sf::Color::White);
 
         RenderScene(s.instances);
+        //DrawFilledTriangle(Point{-200, -250, 1, 0.2f}, Point{200, 50, 1, 0.8f}, Point{20, 250, 1, 0.1f}, sf::Color::Green);
+
+        //frameTexture.loadFromImage(frameBuffer);
+        //frameSprite.setTexture(frameTexture);
+
+        //window.draw(frameSprite);
 
         window.display();
+
+        //frameBuffer.create(canvas_width, canvas_height, sf::Color::White);
+
     }
 
     return 0;
@@ -77,6 +93,10 @@ void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y,
     //sf::RectangleShape pixel(sf::Vector2f(1, 1));
     pixel.setPosition(c_x, c_y);
     pixel.setFillColor(color);
+    //if(static_cast<int>(c_x) < canvas_width && static_cast<int>(c_y) < canvas_height)
+    //{
+        //frameBuffer.setPixel(c_x, c_y, color);
+    //}
 
     window.draw(pixel);
 }
@@ -93,8 +113,6 @@ void DrawLine(Point p0, Point p1, sf::Color color)
 {
     float dx = p1.x - p0.x;
     float dy = p1.y - p0.y;
-
-
 
     if(abs(dx) > abs(dy))
     {
@@ -173,7 +191,6 @@ void SwapPoints(Point& p0, Point& p1)
 
 void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
 {
-
     // Sort the points so that y0 <= y1 <= y2
     if(p1.y < p0.y) { SwapPoints(p1, p0);}
     if(p2.y < p0.y) { SwapPoints(p2, p0);}
@@ -183,12 +200,8 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
     std::vector<float> x01 = Interpolate(p0.y, p0.x, p1.y, p1.x);
     std::vector<float> h01 = Interpolate(p0.y, p0.h, p1.y, p1.h);
 
-
-
     std::vector<float> x12 = Interpolate(p1.y, p1.x, p2.y, p2.x);
     std::vector<float> h12 = Interpolate(p1.y, p1.h, p2.y, p2.h);
-
- 
 
     std::vector<float> x02 = Interpolate(p0.y, p0.x, p2.y, p2.x);
     std::vector<float> h02 = Interpolate(p0.y, p0.h, p2.y, p2.h);
@@ -227,24 +240,17 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
         h_right = h02;
     }
 
-    //std::cout << "x_left size: " << x_left.size() << "\n";
-    //std::cout << "x_right size: " << x_right.size() << "\n";
-    
     // Draw the horizontal segments
     for(float y = p0.y; y <= p2.y; y++)
     {
         float x_l = x_left[static_cast<int>(y - p0.y)];
         float x_r = x_right[static_cast<int>(y - p0.y)];
 
-        //printf("h_left: %f\n", h_left[static_cast<int>(y - p0.y)]);
-        //printf("h_right: %f\n", h_right[static_cast<int>(y - p0.y)]);
         std::vector<float> h_segment = Interpolate(x_l, h_left[static_cast<int>(y - p0.y)], x_r, h_right[static_cast<int>(y - p0.y)]);
 
-        //printf("----------------------");
         for(float x = x_l; x <= x_r; x++)
         {   sf::Color modified_color = color;
             modified_color = ModifiedColor(modified_color, h_segment[x - x_l]);
-            //printf("h_segment[x - x_l]: %f\n", h_segment[x - x_l]);
             PutPixel(window, pixel, static_cast<int>(x), static_cast<int>(y), modified_color);
         }
     }
@@ -253,7 +259,6 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
 sf::Color ModifiedColor(sf::Color color, float modifier)
 {
     sf::Color return_value;
-    //printf("%f\n", modifier);
 
     float r = color.r * modifier;
     float g = color.g * modifier;
@@ -276,7 +281,6 @@ Point ProjectVertex(Point v)
     glm::vec3 new_v = ViewportToCanvas(v.x * d/v.z, v.y * d/v.z, d);
     v.x = new_v.x;
     v.y = new_v.y;
-
     
     return v;
 }
@@ -291,22 +295,22 @@ void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 
     for(auto& t : triangles)
     {
-        RenderTriangle(t, projected);
+        //RenderTriangle(t, projected);
     }
 }
 
-void RenderTriangle(Triangle triangle, std::vector<Point>& projected)
+void RenderTriangle(Triangle triangle)
 {
-    DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
+    //DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
     //DrawFilledTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
 
-    //DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
+    DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
     //DrawFilledTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
 }
 
 void RenderScene(std::vector<Instance> instances)
 {
-    for(auto& instance : instances)
+    for(auto instance : instances)
     {
         RenderInstance(instance);
     }
@@ -314,86 +318,90 @@ void RenderScene(std::vector<Instance> instances)
 
 void RenderInstance(Instance instance)
 { 
+    /*
+
     std::vector<Point> instance_transformed;
-    //std::vector<Point> view_transformed;
     std::vector<Point> projected;
-    //Model model = instance.model;
 
-        for(auto& v : instance.cube.vertices)
-        {
-
-            Point v_model = ApplyTransform(v, instance.transform);
-            instance_transformed.push_back(v_model);
-
-            Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
-            projected.push_back(ProjectVertex(v_view));
-        }
-
-        //instance.cube.updateTriangles(projected);
-        instance.cube.updateTriangles(instance_transformed);
-        
-        Point center{0.0f, 0.0f, 0.0f};
-
-        for(auto& p : instance_transformed)
-        //for(auto& p : projected)
-        {
-            center = center + p;
-        }
-
-        instance.bounding_sphere_center.x = center.x / instance.cube.vertices.size();
-        instance.bounding_sphere_center.y = center.y / instance.cube.vertices.size();
-        instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
-        //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
-
-        Point difference_point = instance_transformed[0] - instance.bounding_sphere_center;
-        //Point difference_point = projected[0] - instance.bounding_sphere_center;
-        glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
-
-        instance.bounding_sphere_radius = glm::length(difference_vector);
-        
-        //printf("difference_vector.x: %f\n", difference_vector.x);
-        //printf("difference_vector.y: %f\n", difference_vector.y);
-        //printf("difference_vector.z: %f\n", difference_vector.z);
-        //printf("instance.bounding_shpere_radius: %f\n", instance.bounding_sphere_radius);
-
-
-    Instance clipped_instance = ClipInstance(instance, planes);
-
-    //std::cout << "-------" << "\n";
-    for(auto triangle : clipped_instance.cube.triangles)
+    for(auto& v : instance.cube.vertices)
     {
-        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
+
+        Point v_model = ApplyTransform(v, instance.transform);
+        instance_transformed.push_back(v_model);
+
+        Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
+        projected.push_back(ProjectVertex(v_view));
     }
+
+    instance.cube.updateTriangles(projected);
+    //instance.cube.updateTriangles(instance_transformed);
+        
+    Point center{0.0f, 0.0f, 0.0f};
+
+    for(auto& p : instance_transformed)
+    //for(auto& p : projected)
+    {
+        center = center + p;
     
-    //std::cout << "Instance.null: " << clipped_instance.null << std::endl;
+    }
+
+    instance.bounding_sphere_center.x = center.x / instance.cube.vertices.size();
+    instance.bounding_sphere_center.y = center.y / instance.cube.vertices.size();
+    instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
+    //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
+
+    Point difference_point = instance_transformed[0] - instance.bounding_sphere_center;
+    glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
+
+    instance.bounding_sphere_radius = glm::length(difference_vector);
+    Instance clipped_instance = ClipInstance(instance, planes);
+    
     if(clipped_instance.null == false)
     {
-        //std::cout << "---------------" << "\n";
         for(auto t : clipped_instance.cube.triangles)
         {
-            //std::cout << "Triangle: " << t.null << "\n";
             if(!t.null)
             {
-                //Triangle clipped_triangle = t;
-                //clipped_triangle.vertices.clear();
-                //for(auto p : t.vertices)
-                //{
-                    //clipped_triangle.vertices.push_back(ApplyCameraTransform(p, c.camera_transform));
-                //}
                 RenderTriangle(t, projected);
             }
         }
 
     }
 
-        instance_transformed.clear();
-        projected.clear();
+    instance_transformed.clear();
+    projected.clear();
+
+    */
+   std::vector<Triangle> triangles_to_render;
+   for(auto t: instance.cube.triangles)
+   {
+        std::vector<Point> transformed_vertices;
+
+        for(auto p : t.vertices)
+        {
+            Point model_transformed_vertex = ApplyTransform(p, instance.transform);
+            Point camera_transformed_vertex = ApplyCameraTransform(model_transformed_vertex, c.camera_transform);
+
+            // Clipping?
+
+            Point perspective_transformed_vertex = ProjectVertex(camera_transformed_vertex);
+
+            transformed_vertices.push_back(perspective_transformed_vertex);
+        }
+
+        triangles_to_render.push_back(Triangle(transformed_vertices, t.color, false));
+   }
+
+   // Render Transformed Triangles
+   for(auto t : triangles_to_render)
+   //for(auto t : instance.cube.triangles)
+   {
+        RenderTriangle(t);
+   }
 }
 
 Point ApplyTransform(Point v, Transform transform)
 {
-    
-
     Point v_scaled = Scale(v, transform.scale_axis);
     Point v_rotated = Rotate(v_scaled, transform.rotation_axis);
     Point v_translated = Translate(v_rotated, transform.translation);
@@ -443,7 +451,6 @@ Point Translate(Point v, glm::vec3 translation_vector)
     return p_translated;
 }
 
-
 float SignedDistance(Plane plane, Point vertex)
 {
     glm::vec3 normal = plane.GetNormal();
@@ -475,24 +482,7 @@ Instance ClipInstance(Instance instance, std::vector<Plane> planes)
     for(auto plane : planes)
     {
         clipped_instance = ClipInstanceAgainstPlane(clipped_instance, plane);
-        //if(clipped_instance.null == true)
-        //{
-            //break;
-        //}
-
-        //std::cout << "-------Plane: " << plane.getName() << "-------\n";
-        for(auto triangle : clipped_instance.cube.triangles)
-        {
-           //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
-        }
     }
-
-    //std::cout << "-------" << "-------\n";
-    for(auto triangle : clipped_instance.cube.triangles)
-    {
-        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
-    }
-
 
     return clipped_instance;
 }
@@ -503,35 +493,18 @@ Instance ClipInstanceAgainstPlane(Instance instance, Plane plane)
     instance.bounding_sphere_center.y, instance.bounding_sphere_center.z);
 
     float d = SignedDistance(plane, instance_bounding_sphere_center);
-
-    //printf("-------------------\n");
-    //std::cout << "Plane: " << plane.getName() << "\n";
-    //printf("instance_bounding_sphere_center.x: %f\n", instance_bounding_sphere_center.x);
-    //printf("instance_bounding_sphere_center.y: %f\n", instance_bounding_sphere_center.y);
-    //printf("instance_bounding_sphere_center.z: %f\n", instance_bounding_sphere_center.z);
-    //printf("instance.bounding_sphere_radius: %f\n", instance.bounding_sphere_radius);
-    //printf("Signed Distance: %f\n", d);
     
     Instance clipped_instance = instance;   
     if(d > instance.bounding_sphere_radius)
     {
-        //std::cout << "Within" << "\n";
         return instance;
     }else if(d < -instance.bounding_sphere_radius)
     {
-        //std::cout << "Outside" << "\n";
         instance.null = true;
         return instance;
     }else
     {
-        //std::cout << "Between" << "\n";
         clipped_instance.cube.triangles = ClipTrianglesAgainstPlane(instance.cube.triangles, plane);
-    }
-
-    //std::cout << "-------Plane: " << plane.getName() << "-------\n";
-    for(auto triangle : clipped_instance.cube.triangles)
-    {
-        //std::cout << "clipped_triangle.null: " << triangle.null << "\n";
     }
 
     return clipped_instance;
@@ -540,12 +513,9 @@ Instance ClipInstanceAgainstPlane(Instance instance, Plane plane)
 std::vector<Triangle>ClipTrianglesAgainstPlane(std::vector<Triangle> triangles, Plane plane)
 {
     std::vector<Triangle> clipped_triangles_return;
-    //std::cout << "-------Plane: " << plane.getName() << "-------\n";
     for(auto triangle : triangles)
     {
         std::vector<Triangle> clipped_triangles = ClipTriangle(triangle, plane);
-        //std::cout << "--------------"  << "\n";
-        //std::cout << "clipped_triangle.null: " << clipped_triangle.null << "\n";
 
         for(auto clipped_triangle : clipped_triangles)
         {
@@ -561,10 +531,6 @@ std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
     float d0 = SignedDistance(plane, triangle.vertices[0]);
     float d1 = SignedDistance(plane, triangle.vertices[1]);
     float d2 = SignedDistance(plane, triangle.vertices[2]);
-    //std::cout << "------- Triangle -------" << "\n";
-    //std::cout << "d0: " << d0 << "\n";
-    //std::cout << "d1: " << d1 << "\n";
-    //std::cout << "d2: " << d2 << "\n";
 
     std::vector<Triangle> clipped_triangles;
     if(d0 >= 0 && d1 >= 0 && d2 >= 0)
