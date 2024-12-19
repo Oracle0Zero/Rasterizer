@@ -8,7 +8,7 @@ public:
     float x;
     float y;
     float z;
-    float h;
+    float h = 1.0f;
     Point();
     Point(float x_coord, float y_coord, float z_coord, float h_intensity=1.0f)
     {
