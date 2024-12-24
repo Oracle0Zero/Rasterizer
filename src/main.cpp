@@ -11,29 +11,26 @@
 #include "../include/Instance.h"
 #include "../include/Scene.h"
 #include "../include/Utils.h"
-
+#include "../include/imgui.h"
+#include "../include/imgui-SFML.h" 
 
 Scene s;
 std::vector<Plane> planes;
 
 sf::Image frameBuffer;
-sf::Image whiteBuffer;
+float depthBuffer[canvas_width][canvas_height];
 
-bool observe_clipping = false;
+bool observe_clipping = true;
 
 int main()
 {
     frameBuffer.create(canvas_width, canvas_height, sf::Color::White);
-    //whiteBuffer.create(canvas_width, canvas_height, sf::Color::White);
 
     sf::Texture frameTexture;
     sf::Sprite frameSprite;
 
     c.SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
     Cube c1;
-
-    //Model model;
-    //model.cubes.push_back(c1);
 
     Instance instance_1;
     instance_1.cube = c1;
@@ -47,17 +44,13 @@ int main()
     instance_2.transform.rotation_axis = glm::vec3(0.0f, 76.0f, 23.0f);
     instance_2.transform.scale_axis = glm::vec3(1.0f, 1.0f, 1.0f);
 
-
     s.instances.push_back(instance_1);
-    //s.instances.push_back(instance_2);
     
     planes.push_back(Plane{glm::vec3(0, 0, 1), -d, "near"});
     planes.push_back(Plane{glm::vec3(1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0, "left"});
     planes.push_back(Plane{glm::vec3(-1.0f/sqrt(2), 0, 1.0f/sqrt(2)), 0, "right"});
     planes.push_back(Plane{glm::vec3(0, 1.0f/sqrt(2), 1.0f/sqrt(2)), 0, "bottom"});
     planes.push_back(Plane{glm::vec3(0, -1.0f/sqrt(2), 1.0f/sqrt(2)), 0, "top"});
-
-    //Scene clipped_scene = ClipScene(s, planes);
 
     while (window.isOpen())
     {
@@ -77,12 +70,11 @@ int main()
 
         ProcessEvents();
 
+
+        ClearDepthBuffer(depthBuffer);
         window.clear(sf::Color::White);
 
-        //Triangle test(std::vector<Point>{Point{-100, -250, 1, 0.2f}, Point{200, 50, 1, 0.8f}, Point{20, 250, 1, 0.1f}}, sf::Color::Green, false);
-        //RenderTriangle(test);
         RenderScene(s.instances);
-        //DrawFilledTriangle(Point{-200, -250, 1, 0.2f}, Point{200, 50, 1, 0.8f}, Point{20, 250, 1, 0.1f}, sf::Color::Green);
 
         frameTexture.loadFromImage(frameBuffer);
         frameSprite.setTexture(frameTexture);
@@ -100,37 +92,37 @@ void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y,
     float c_x = (float)canvas_width / 2 + x;
     float c_y = (float)canvas_height / 2 - y;
 
-
-
     unsigned int c_x_unsigned = static_cast<u_int>(c_x);
     unsigned int c_y_unsigned = static_cast<u_int>(c_y);
-
-    //std::cout << "------------" << "\n";
-    //std::cout << "x: " << static_cast<int>(c_x_unsigned) << "\n";
-    //std::cout << "y: " << static_cast<int>(c_y_unsigned) << "\n";
-
-    //sf::RectangleShape pixel(sf::Vector2f(1, 1));
-
-    //pixel.setPosition(c_x, c_y);
-    //pixel.setFillColor(color);
 
     if(c_x_unsigned >= 0 && c_x_unsigned < canvas_width)
     {
         if(c_y_unsigned >= 0 && c_y_unsigned < canvas_height)
         {
             frameBuffer.setPixel(c_x_unsigned, c_y_unsigned, color);
-        }else
-        {
-            std::cout << "------------" << "\n";
-            std::cout << "y: " << c_y_unsigned << "\n";
         }
-    }else
-    {
-        std::cout << "------------" << "\n";
-        std::cout << "x: " << c_x_unsigned << "\n";
     }
+}
 
-    //window.draw(pixel);
+void PutPixel(sf::RenderWindow& window, sf::RectangleShape& pixel, int x, int y, float z, sf::Color color)
+{
+    float c_x = (float)canvas_width / 2 + x;
+    float c_y = (float)canvas_height / 2 - y;
+
+    unsigned int c_x_unsigned = static_cast<u_int>(c_x);
+    unsigned int c_y_unsigned = static_cast<u_int>(c_y);
+
+    if(c_x_unsigned >= 0 && c_x_unsigned < canvas_width)
+    {
+        if(c_y_unsigned >= 0 && c_y_unsigned < canvas_height)
+        {
+            if(z > depthBuffer[c_x_unsigned][c_y_unsigned])
+            {
+                frameBuffer.setPixel(c_x_unsigned, c_y_unsigned, color);
+                depthBuffer[c_x_unsigned][c_y_unsigned] = z;
+            }
+        }
+    }
 }
 
 glm::vec3 CanvasToViewPort(int x, int y)
@@ -154,7 +146,6 @@ void DrawLine(Point p0, Point p1, sf::Color color)
         {
             SwapPoints(p0, p1);
         }  
-        //float a = dy/dx;
         std::vector<float> ys = Interpolate(p0.x, p0.y, p1.x, p1.y);
         for(float x = p0.x; x <= p1.x; ++x)
         {
@@ -168,7 +159,6 @@ void DrawLine(Point p0, Point p1, sf::Color color)
         {
             SwapPoints(p0, p1);
         }
-        //float a = dx/dy;
         std::vector<float> xs = Interpolate(p0.y, p0.x, p1.y, p1.x);
         for(float y = p0.y; y <= p1.y; ++y)
         {
@@ -216,6 +206,10 @@ void SwapPoints(Point& p0, Point& p1)
     p0.x = p1.x;
     p1.x = temp;
 
+    temp = p0.z;
+    p0.z = p1.z;
+    p1.z = temp;
+
     temp = p0.h;
     p0.h = p1.h;
     p1.h = temp;
@@ -228,73 +222,61 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
     if(p2.y < p0.y) { SwapPoints(p2, p0);}
     if(p2.y < p1.y) { SwapPoints(p2, p1);}
 
-    //std::cout << "----------------------" << "\n";
-    //std::cout << "p0.y: " << p0.y << "\n";
-    //std::cout << "p1.y: " << p1.y << "\n";
-    //std::cout << "p2.y: " << p2.y << "\n";
-
-    // Computer the x coordinates and h values of the triangle edges
+    // Compute the x,z coordinates and h values of the triangle edges
     std::vector<float> x01 = Interpolate(p0.y, p0.x, p1.y, p1.x);
+    std::vector<float> z01 = Interpolate(p0.y, 1/p0.z, p1.y, 1/p1.z);
     std::vector<float> h01 = Interpolate(p0.y, p0.h, p1.y, p1.h);
 
     std::vector<float> x12 = Interpolate(p1.y, p1.x, p2.y, p2.x);
+    std::vector<float> z12 = Interpolate(p1.y, 1/p1.z, p2.y, 1/p2.z);
     std::vector<float> h12 = Interpolate(p1.y, p1.h, p2.y, p2.h);
 
     std::vector<float> x02 = Interpolate(p0.y, p0.x, p2.y, p2.x);
+    std::vector<float> z02 = Interpolate(p0.y, 1/p0.z, p2.y, 1/p2.z);
     std::vector<float> h02 = Interpolate(p0.y, p0.h, p2.y, p2.h);
 
-
-    //std::cout << "Before" << "\n";
     // Concatenate short sides
     x01.pop_back();
     std::vector<float> x012;
-    //x012.insert(x012.end(), x01.begin(), x01.end());
-    for(float f : x01)
-    {
-        x012.push_back(f);
-    }
-    //x012.insert(x012.end(), x12.begin(), x12.end());
-    for(float f : x12)
-    {
-        x012.push_back(f);
-    }
+    x012.insert(x012.end(), x01.begin(), x01.end());
+    x012.insert(x012.end(), x12.begin(), x12.end());
+
+    z01.pop_back();
+    std::vector<float> z012;
+    z012.insert(z012.end(), z01.begin(), z01.end());
+    z012.insert(z012.end(), z12.begin(), z12.end());
 
     h01.pop_back();
     std::vector<float> h012;
-    //h012.insert(h012.end(), h01.begin(), h01.end());
-    for(float f : h01)
-    {
-        h012.push_back(f);
-    }
-    //h012.insert(h012.end(), h12.begin(), h12.end());
-    for(float f : h12)
-    {
-        h012.push_back(f);
-    }
-    //std::cout << "After" << "\n";
+    h012.insert(h012.end(), h01.begin(), h01.end());
+    h012.insert(h012.end(), h12.begin(), h12.end());
+
     std::vector<float> x_left;
     std::vector<float> x_right;
+    std::vector<float> z_left;
+    std::vector<float> z_right;
     std::vector<float> h_left;
     std::vector<float> h_right;
 
-    //std::cout << "x02.size(): " << x02.size() << "\n";
-    //std::cout << "x012.size(): " << x012.size() << "\n";
-    
     // Determine which is left and which is right
-    int m = static_cast<int>(floor(x012.size()/2));
+    int m = static_cast<int>(floor(x012.size()/2)); 
     if(x02[m] < x012[m])
     {
         x_left = x02;
+        z_left = z02;
         h_left = h02;
 
         x_right = x012;
+        z_right = z012;
         h_right = h012;
     }else
     {
         x_left = x012;
+        z_left = z012;
         h_left = h012;
 
         x_right = x02;
+        z_right = z02;
         h_right = h02;
     }
 
@@ -317,18 +299,27 @@ void DrawFilledTriangle(Point p0, Point p1, Point p2, sf::Color color)
         {
             h_segment = Interpolate(x_l, h_left[static_cast<int>(y - p0.y)], x_r, h_right[static_cast<int>(y - p0.y)]);
         }
+
+        std::vector<float> z_segment;
+        if(static_cast<int>(y - p0.y) >= 0 && static_cast<int>(y - p0.y) < z_left.size() && static_cast<int>(y - p0.y) < z_right.size())
+        {
+            z_segment = Interpolate(x_l, z_left[static_cast<int>(y - p0.y)], x_r, z_right[static_cast<int>(y - p0.y)]);
+        }
         
         for(float x = x_l; x <= x_r; x++)
         {   sf::Color modified_color = color;
 
             if(static_cast<int>(x - x_l) >= 0 && static_cast<int>(x - x_l) < h_segment.size())
             {
-                modified_color = ModifiedColor(color, h_segment[static_cast<int>(x - x_l)]);
-                PutPixel(window, pixel, static_cast<int>(x), static_cast<int>(y), modified_color);
+                if(static_cast<int>(x - x_l) >= 0 && static_cast<int>(x - x_l) < z_segment.size())
+                {
+                    float z = z_segment[static_cast<int>(x - x_l)];
+
+                    modified_color = ModifiedColor(color, h_segment[static_cast<int>(x - x_l)]);
+                    PutPixel(window, pixel, static_cast<int>(x), static_cast<int>(y), z, modified_color);
+                }
             }
         }
-
-        //DrawLine(Point{x_l, y-p0.y, 1.0f}, Point{x_r, y-p0.y, 1.0f}, color);;
     }
 }
 
@@ -347,28 +338,20 @@ sf::Color ModifiedColor(sf::Color color, float modifier)
     return return_value;
 }
 
-glm::vec3 ViewportToCanvas(float x, float y, float d)
+glm::vec3 ViewportToCanvas(float x, float y, float z)
 {
-    return glm::vec3(x * canvas_width/viewport_width, y * canvas_height/viewport_height, d);
+    return glm::vec3(x * canvas_width/viewport_width, y * canvas_height/viewport_height, z);
 }
 
 Point ProjectVertex(Point v)
 {
-    //std::cout << "v.z: " << v.z << "\n";
     glm::vec3 new_v;
-    //if(v.z != 0)
-    //{
-        new_v = ViewportToCanvas(v.x * d/v.z, v.y * d/v.z, d);
-   //}
+
+    new_v = ViewportToCanvas(v.x * d/v.z, v.y * d/v.z, v.z);
 
     v.x = new_v.x;
     v.y = new_v.y;
 
-    //std::cout << "--------------" << "\n";
-   //std::cout << "v.x: " << v.x << "\n";
-    //std::cout << "v.y: " << v.y << "\n";
-    //std::cout << "v.z: " << v.z << "\n";
-    
     return v;
 }
 
@@ -388,10 +371,6 @@ void RenderObject(std::vector<Point> vertices, std::vector<Triangle> triangles)
 
 void RenderTriangle(Triangle triangle)
 {
-    //DrawWireframeTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
-    //DrawFilledTriangle(projected[triangle.point_indices[0]], projected[triangle.point_indices[1]], projected[triangle.point_indices[2]], triangle.color);
-
-    //DrawWireframeTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
     DrawFilledTriangle(triangle.vertices[0], triangle.vertices[1], triangle.vertices[2], triangle.color);
 }
 
@@ -403,62 +382,8 @@ void RenderScene(std::vector<Instance> instances)
     }
 }
 
-void RenderInstance(Instance instance)
+void RenderInstance(Instance& instance)
 { 
-    /*
-
-    std::vector<Point> instance_transformed;
-    std::vector<Point> projected;
-
-    for(auto& v : instance.cube.vertices)
-    {
-
-        Point v_model = ApplyTransform(v, instance.transform);
-        instance_transformed.push_back(v_model);
-
-        Point v_view = ApplyCameraTransform(v_model, c.camera_transform);
-        projected.push_back(ProjectVertex(v_view));
-    }
-
-    instance.cube.updateTriangles(projected);
-    //instance.cube.updateTriangles(instance_transformed);
-        
-    Point center{0.0f, 0.0f, 0.0f};
-
-    for(auto& p : instance_transformed)
-    //for(auto& p : projected)
-    {
-        center = center + p;
-    
-    }
-
-    instance.bounding_sphere_center.x = center.x / instance.cube.vertices.size();
-    instance.bounding_sphere_center.y = center.y / instance.cube.vertices.size();
-    instance.bounding_sphere_center.z = center.z / instance.cube.vertices.size();
-    //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
-
-    Point difference_point = instance_transformed[0] - instance.bounding_sphere_center;
-    glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
-
-    instance.bounding_sphere_radius = glm::length(difference_vector);
-    Instance clipped_instance = ClipInstance(instance, planes);
-    
-    if(clipped_instance.null == false)
-    {
-        for(auto t : clipped_instance.cube.triangles)
-        {
-            if(!t.null)
-            {
-                RenderTriangle(t, projected);
-            }
-        }
-
-    }
-
-    instance_transformed.clear();
-    projected.clear();
-
-    */
    std::vector<Triangle> triangles_to_clip;
    for(auto t : instance.cube.triangles)
    {
@@ -466,11 +391,6 @@ void RenderInstance(Instance instance)
 
         for(auto p : t.vertices)
         {
-            
-            //Point camera_transformed_vertex = ApplyCameraTransform(model_transformed_vertex, c.camera_transform);
-            //Point perspective_transformed_vertex = ProjectVertex(camera_transformed_vertex);
-
-            //transformed_vertices.push_back(camera_transformed_vertex);
             if(observe_clipping)
             {
                 Point model_transformed_vertex = ApplyTransform(p, instance.transform);
@@ -498,31 +418,26 @@ void RenderInstance(Instance instance)
             divider++;
         }
     }
+    
     instance.bounding_sphere_center.x = center.x / divider;
     instance.bounding_sphere_center.y = center.y / divider;
     instance.bounding_sphere_center.z = center.z / divider;
-    //instance.bounding_sphere_center.h = center.h / instance.cube.vertices.size();
 
     Point difference_point = triangles_to_clip[0].vertices[0] - instance.bounding_sphere_center;
     glm::vec3 difference_vector(difference_point.x, difference_point.y, difference_point.z);
 
     instance.bounding_sphere_radius = glm::length(difference_vector);
 
-    //std::cout << "instance.bounding_sphere_radius: " << instance.bounding_sphere_radius << "\n";
-
     // Clipping
     instance.cube.triangles = triangles_to_clip;
     Instance clipped_instance = ClipInstance(instance, planes);
 
     std::vector<Triangle> triangles_to_render;
-    //std::cout << "clipped_instance: " << clipped_instance.null << "\n";
     if(!clipped_instance.null)
     {
-        //std::cout << "---------------------------" << "\n";
         // Projection Tranformation
         for(auto t: clipped_instance.cube.triangles)
         {
-            //std::cout << "t.null: " << t.null << "\n";
             if(!t.null)
             {
                 std::vector<Point> transformed_vertices;
@@ -539,11 +454,6 @@ void RenderInstance(Instance instance)
                         Point perspective_transformed_vertex = ProjectVertex(p);
                         transformed_vertices.push_back(perspective_transformed_vertex);
                     }
-
-                    //Point perspective_transformed_vertex = ProjectVertex(p);
-
-                    //transformed_vertices.push_back(perspective_transformed_vertex);
-
                 }
 
                 triangles_to_render.push_back(Triangle(transformed_vertices, t.color, false));
@@ -552,7 +462,6 @@ void RenderInstance(Instance instance)
 
         // Render Transformed Triangles
         for(auto t : triangles_to_render)
-        //for(auto t : instance.cube.triangles)
         {
             if(!t.null)
             {
@@ -838,7 +747,6 @@ std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
 
 void ProcessEvents()
 {
-
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
         {
             c.camera_transform.translation.z += 0.05f;
@@ -894,6 +802,23 @@ void ProcessEvents()
             s.instances[0].transform.translation = glm::vec3(translate_x, translate_y, translate_z);
         }
 
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
+        {
+            rotate_x = s.instances[0].transform.rotation_axis.x + 0.5f;
+            s.instances[0].transform.rotation_axis = glm::vec3(rotate_x, rotate_y, rotate_z);
+        }
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
+        {
+            rotate_y = s.instances[0].transform.rotation_axis.y + 0.5f;
+            s.instances[0].transform.rotation_axis = glm::vec3(rotate_x, rotate_y, rotate_z);
+        }
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num3))
+        {
+            rotate_z = s.instances[0].transform.rotation_axis.z + 0.5f;
+            s.instances[0].transform.rotation_axis = glm::vec3(rotate_x, rotate_y, rotate_z);
+        }
 }
 
 Point Intersection(Point A, Point B, Plane plane)
@@ -915,6 +840,17 @@ Point Intersection(Point A, Point B, Plane plane)
     new_b.x = vector_new_b.z;
 
     return new_b;
+}
+
+void ClearDepthBuffer(float depthBuffer[canvas_width][canvas_height])
+{
+    for(int i = 0; i < canvas_width; i++)
+    {
+        for(int j = 0; j < canvas_height; j++)
+        {
+            depthBuffer[i][j] = 0;
+        }
+    }
 }
 
 

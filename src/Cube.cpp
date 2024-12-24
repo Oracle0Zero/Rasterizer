@@ -11,9 +11,9 @@ Cube::Cube()
     vertices.push_back(Point{-1, -1, -1});
     vertices.push_back(Point{1, -1, -1});
 
-    std::vector<int> indices = {0, 1, 1};
+    std::vector<int> indices = {0, 1, 2};
     triangles.push_back(Triangle{std::vector<Point>{vertices[0], \
-    vertices[1], vertices[1]}, sf::Color::Red});
+    vertices[1], vertices[2]}, sf::Color::Red});
 
     indices = {0, 2, 3};
     triangles.push_back(Triangle{std::vector<Point>{vertices[0], \
@@ -41,7 +41,7 @@ Cube::Cube()
 
     indices = {1, 6, 2};
     triangles.push_back(Triangle{std::vector<Point>{vertices[1], \
-    vertices[6], vertices[2]}, sf::Color::Red});
+    vertices[6], vertices[2]}, sf::Color::Blue});
 
     indices = {4, 5, 1};
     triangles.push_back(Triangle{std::vector<Point>{vertices[4], \
