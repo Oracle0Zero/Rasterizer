@@ -11,8 +11,6 @@
 #include "../include/Instance.h"
 #include "../include/Scene.h"
 #include "../include/Utils.h"
-#include "../include/imgui.h"
-#include "../include/imgui-SFML.h" 
 
 Scene s;
 std::vector<Plane> planes;
@@ -642,11 +640,11 @@ std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
 
         return clipped_triangles;
     }
-    /*
+    
     else if(d0 > 0 && d1 < 0 && d2 < 0)
     {
-        std::cout << "--------------------------" << "\n";
-        std::cout << "Plane: " << plane.getName() << "\n";
+        //std::cout << "--------------------------" << "\n";
+        //std::cout << "Plane: " << plane.getName() << "\n";
         Point new_v1 = Intersection(triangle.vertices[0], triangle.vertices[1], plane);
         Point new_v2 = Intersection(triangle.vertices[0], triangle.vertices[2], plane);
 
@@ -657,7 +655,9 @@ std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
 
         return clipped_triangles;
 
-    }else if(d1 > 0 && d0 < 0 && d2 < 0)
+    }
+    
+    else if(d1 > 0 && d0 < 0 && d2 < 0)
     {
         Point new_v0 = Intersection(triangle.vertices[1], triangle.vertices[0], plane);
         Point new_v2 = Intersection(triangle.vertices[1], triangle.vertices[2], plane);
@@ -738,7 +738,7 @@ std::vector<Triangle> ClipTriangle(Triangle triangle, Plane plane)
 
         return clipped_triangles;
     }
-    */
+    
     
     
     clipped_triangles.push_back(triangle);
@@ -823,21 +823,43 @@ void ProcessEvents()
 
 Point Intersection(Point A, Point B, Plane plane)
 {
+    /*
+    std::cout << "-----------------\n";
+    std::cout << "A.x: " << A.x << "\n";
+    std::cout << "A.y: " << A.y << "\n";
+    std::cout << "A.z: " << A.z << "\n";
+
+    std::cout << "B.x: " << B.x << "\n";
+    std::cout << "B.y: " << B.y << "\n";
+    std::cout << "B.z: " << B.z << "\n";
+    */
+    
+
     Point new_b;
+
     glm::vec3 vector_new_b;
+
     glm::vec3 vector_A(A.x, A.y, A.z);
     glm::vec3 vector_B(B.x, B.y, B.z);
     glm::vec3 difference_vector = vector_B - vector_A;
+
     float D = plane.GetDistanceFromOrigin();
+
     glm::vec3 plane_normal = plane.GetNormal();
 
     float t = (-1*D - glm::dot(plane_normal, vector_A)) / glm::dot(plane_normal, difference_vector);
-
+    //std::cout << "t: " << t << "\n";
     vector_new_b = vector_A + t*(difference_vector);
 
     new_b.x = vector_new_b.x;
     new_b.y = vector_new_b.y;
-    new_b.x = vector_new_b.z;
+    new_b.z = vector_new_b.z;
+
+    /*
+    std::cout << "new_b.x: " << new_b.x << "\n";
+    std::cout << "new_b.y: " << new_b.y << "\n";
+    std::cout << "new_b.z: " << new_b.z << "\n";
+    */
 
     return new_b;
 }
